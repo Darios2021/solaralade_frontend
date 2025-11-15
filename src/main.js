@@ -1,4 +1,3 @@
-// src/main.js
 import { createApp } from 'vue'
 import App from './App.vue'
 
@@ -12,7 +11,8 @@ const vuetify = createVuetify({
   directives,
 })
 
-function mountSolarCalculator(targetId = 'solar-calculator', props = {}) {
+// Función de montaje que podemos invocar desde WordPress
+export function mountSolarCalculator(targetId = 'solar-calculator', props = {}) {
   const el = document.getElementById(targetId)
 
   if (!el) {
@@ -23,15 +23,13 @@ function mountSolarCalculator(targetId = 'solar-calculator', props = {}) {
   const app = createApp(App, props)
   app.use(vuetify)
   app.mount(el)
+
   return app
 }
 
-// Montaje automático si existe el div
-if (document.getElementById('solar-calculator')) {
-  mountSolarCalculator()
-}
-
-// API global opcional
-window.SolarCalculator = {
-  mount: mountSolarCalculator,
+// Exponer una API global para usar desde el <script> de Elementor
+if (typeof window !== 'undefined') {
+  window.SolarCalculator = {
+    mount: mountSolarCalculator,
+  }
 }
