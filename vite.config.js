@@ -11,9 +11,15 @@ export default defineConfig({
   ],
   build: {
     outDir: 'dist',
+    // Modo librería: genera UN solo JS fijo: solar-calculator.js
+    lib: {
+      entry: 'src/main.js',
+      name: 'SolarCalculator',
+      formats: ['iife'],
+      fileName: () => 'solar-calculator.js',
+    },
     rollupOptions: {
       output: {
-        entryFileNames: 'solar-calculator.js',
         assetFileNames: 'assets/[name].[ext]',
       },
     },
