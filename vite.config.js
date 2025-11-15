@@ -12,9 +12,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     rollupOptions: {
-      // Dejamos que Vite use index.html como entry
       output: {
-        // Nombre estable para el bundle principal
         entryFileNames: 'solar-calculator.js',
         assetFileNames: 'assets/[name].[ext]',
       },
