@@ -11,8 +11,12 @@ RUN npm run build
 # Etapa de servir estático
 FROM nginx:alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Sobrescribimos el default.conf con el nuestro (sin loops)
+COPY default.conf /etc/nginx/conf.d/default.conf
+
+# Archivos estáticos compilados de Vite
 COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
+
 CMD ["nginx", "-g", "daemon off;"]
