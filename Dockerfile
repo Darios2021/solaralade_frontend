@@ -11,7 +11,7 @@ RUN npm run build
 # Etapa de servir estático
 FROM nginx:alpine
 
-# Sobrescribimos el default.conf con el nuestro (sin loops)
+# Usamos nuestro default.conf minimalista
 COPY default.conf /etc/nginx/conf.d/default.conf
 
 # Archivos estáticos compilados de Vite
