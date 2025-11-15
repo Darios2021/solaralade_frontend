@@ -1,0 +1,23 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import vuetify from 'vite-plugin-vuetify'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    vuetify({
+      autoImport: true,
+    }),
+  ],
+  build: {
+    outDir: 'dist',
+    rollupOptions: {
+      input: 'src/main.js',
+      output: {
+        entryFileNames: 'solar-calculator.js',
+        assetFileNames: 'assets/[name].[ext]'
+      }
+    }
+  },
+  base: '/'
+})
