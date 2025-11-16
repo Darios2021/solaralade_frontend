@@ -35,16 +35,27 @@
                 :class="{ active: activeView === 'green' }"
                 @click="activeView = 'green'"
               >
-                Solar Green Alade
+                Más información
               </button>
             </div>
           </div>
 
-          <!-- VISTAS -->
-          <component
-            :is="currentViewComponent"
+          <!-- VISTA FORMULARIO (siempre montada, solo se muestra/oculta) -->
+          <SolarLeadForm
+            v-show="activeView === 'form'"
             @open-calc="activeView = 'calc'"
             @open-solar-green="activeView = 'green'"
+          />
+
+          <!-- VISTA CALCULADORA -->
+          <ConsumptionCalculator
+            v-show="activeView === 'calc'"
+            @open-form="activeView = 'form'"
+          />
+
+          <!-- VISTA INFO SOLAR GREEN -->
+          <SolarGreenInfo
+            v-show="activeView === 'green'"
             @open-form="activeView = 'form'"
           />
         </v-card>
@@ -54,7 +65,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import SolarLeadForm from './components/SolarLeadForm.vue'
 import ConsumptionCalculator from './components/ConsumptionCalculator.vue'
 import SolarGreenInfo from './components/SolarGreenInfo.vue'
@@ -62,14 +73,6 @@ import SolarGreenInfo from './components/SolarGreenInfo.vue'
 console.log('[solar-calculator] App.vue montado')
 
 const activeView = ref('form')
-
-const viewMap = {
-  form: SolarLeadForm,
-  calc: ConsumptionCalculator,
-  green: SolarGreenInfo,
-}
-
-const currentViewComponent = computed(() => viewMap[activeView.value] || SolarLeadForm)
 </script>
 
 <style scoped>
@@ -187,7 +190,7 @@ const currentViewComponent = computed(() => viewMap[activeView.value] || SolarLe
   box-shadow: none !important;
 }
 
-/* Sandbox fuerte para que Elementor no rompa nada */
+/* Sandbox fuerte */
 #solar-calculator,
 #solar-calculator * {
   box-sizing: border-box !important;

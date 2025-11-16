@@ -101,7 +101,7 @@ const yearlySavings = computed(() => {
 const hasData = computed(() => !!(monthlyKwh.value && systemSize.value))
 
 const handleAskContact = () => {
-  emit('open-form')
+  // 1) Primero mandamos el evento con la factura
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent('solar-calculator:use-bill', {
@@ -109,6 +109,9 @@ const handleAskContact = () => {
       }),
     )
   }
+
+  // 2) Luego pedimos volver al formulario
+  emit('open-form')
 }
 </script>
 
