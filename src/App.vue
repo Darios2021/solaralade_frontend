@@ -653,10 +653,59 @@ const resetFlow = () => {
   align-items: center;
 }
 
+/* TABLET */
+@media (max-width: 960px) {
+  .form-wrapper {
+    padding: 12px;
+  }
+
+  .form-card {
+    max-width: 520px;
+    width: 100%;
+    border-radius: 18px;
+  }
+}
+
+/* MOBILE */
 @media (max-width: 600px) {
+  .form-wrapper {
+    padding: 10px;
+  }
+
   .form-card {
     max-width: 100%;
-    padding-inline: 18px;
+    width: 100%;
+    padding: 20px 18px 18px;
+    border-radius: 16px;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25);
+  }
+
+  .form-title {
+    font-size: 1.15rem;
+  }
+
+  .form-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .submit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .back-btn {
+    align-self: flex-start;
+    padding-left: 0;
+  }
+
+  .success-card {
+    padding: 18px 16px 16px;
   }
 
   .success-summary {
@@ -665,13 +714,9 @@ const resetFlow = () => {
 }
 </style>
 
-<!-- Estilos globales para aislar el simulador dentro de #solar-calculator -->
+<!-- Estilos globales para que Elementor no rompa nada y para mobile/tablet -->
 <style>
-/* Fondo transparente aunque el theme/Elementor meta colores propios */
-#solar-calculator .v-application,
-#solar-calculator .v-application__wrap,
-#solar-calculator .v-main,
-#solar-calculator .v-container,
+/* Fondo transparente del v-app dentro del contenedor del simulador */
 #solar-calculator .solar-app,
 #solar-calculator .solar-app .v-application__wrap,
 #solar-calculator .solar-app .v-main,
@@ -680,7 +725,7 @@ const resetFlow = () => {
   box-shadow: none;
 }
 
-/* Botones Vuetify: evitar que Elementor los subraye o cambie tipografía */
+/* BOTONES VUETIFY: evitar subrayados/mayúsculas heredados */
 #solar-calculator .v-btn,
 #solar-calculator .v-btn:link,
 #solar-calculator .v-btn:visited {
@@ -688,7 +733,6 @@ const resetFlow = () => {
   text-transform: none;
   letter-spacing: 0;
   font-weight: 600;
-  border-radius: 999px;
 }
 
 #solar-calculator .v-btn__content {
@@ -696,13 +740,13 @@ const resetFlow = () => {
   text-transform: none;
 }
 
-/* Por si Elementor mete estilos generales a cualquier <button> */
+/* Por si Elementor toca cualquier <button> */
 #solar-calculator button {
   text-decoration: none;
-  box-shadow: none;
+  text-transform: none;
 }
 
-/* Inputs Vuetify: que no hereden rarezas de formularios Elementor */
+/* Inputs / selects Vuetify */
 #solar-calculator .v-field,
 #solar-calculator .v-input,
 #solar-calculator .v-text-field,
@@ -717,10 +761,18 @@ const resetFlow = () => {
   text-transform: none;
 }
 
-/* Limpiar sombras/bordes globales en controles */
+/* Limpiar sombras/bordes globales */
+#solar-calculator button,
 #solar-calculator input,
 #solar-calculator select,
 #solar-calculator textarea {
   box-shadow: none;
+}
+
+/* Ajuste del contenido del dialog en mobile/tablet (margen lateral) */
+@media (max-width: 600px) {
+  #solar-calculator .v-overlay__content {
+    margin: 0 10px !important;
+  }
 }
 </style>
