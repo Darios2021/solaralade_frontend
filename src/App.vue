@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <v-app class="solar-app">
     <v-container class="pa-0 d-flex justify-center" fluid>
       <div class="form-wrapper">
         <v-card class="form-card" elevation="8">
@@ -236,23 +236,20 @@ const errorMessage = ref('')
 const isCompleted = ref(false)
 const lastLead = ref(null)
 
-// === FORM HELPERS ===
 const createInitialForm = () => ({
   city: '',
   province: null,
-  country: 'AR', // Argentina por defecto
+  country: 'AR',
   purpose: null,
   usage: null,
-  currentBill: null, // factura mensual aprox en ARS
+  currentBill: null,
   fullName: '',
   phone: '',
   email: '',
 })
 
-// === DATOS DEL FORM ===
 const form = reactive(createInitialForm())
 
-// Catálogos con códigos + labels
 const provinces = [
   { value: 'BA', label: 'Buenos Aires' },
   { value: 'CABA', label: 'CABA' },
@@ -311,7 +308,6 @@ const usages = [
   { value: 'other', label: 'Otros', segment: 'Otros' },
 ]
 
-// Mapas para lookup rápido
 const purposeMap = computed(() =>
   Object.fromEntries(purposes.map(p => [p.value, p]))
 )
@@ -319,7 +315,6 @@ const usageMap = computed(() =>
   Object.fromEntries(usages.map(u => [u.value, u]))
 )
 
-// === REGLAS VALIDACIÓN ===
 const rules = {
   required: v => !!v || 'Campo obligatorio',
   requiredNumber: v =>
@@ -328,7 +323,6 @@ const rules = {
     !v || /.+@.+\..+/.test(v) || 'Email inválido',
 }
 
-// === NAVEGACIÓN ENTRE PASOS ===
 const goNext = async () => {
   errorMessage.value = ''
   if (!formRef.value) return
@@ -347,18 +341,16 @@ const goPrev = () => {
   }
 }
 
-// === LÓGICA DE NEGOCIO DE LEAD ===
-
 function estimateMonthlyKwh(billArs) {
   const bill = Number(billArs) || 0
-  const avgTariff = 120 // ARS/kWh aprox
+  const avgTariff = 120
   if (!bill) return null
   return Math.round(bill / avgTariff)
 }
 
 function estimateSystemSizeKw(monthlyKwh) {
   if (!monthlyKwh) return null
-  const kwhPerKw = 130 // kWh/mes por kWp (aprox)
+  const kwhPerKw = 130
   return Number((monthlyKwh / kwhPerKw).toFixed(1))
 }
 
@@ -453,7 +445,6 @@ const handleSubmit = async () => {
   }
 }
 
-// === RESUMEN PARA LA PANTALLA DE ÉXITO ===
 const summaryLocation = computed(() => {
   const province = provinces.find(p => p.value === form.province)
   const country = countries.find(c => c.value === form.country)
@@ -485,9 +476,7 @@ const summarySystemSize = computed(() => {
   return `${previewSystemSize.value} kWp (≈ ${previewKwh.value} kWh/mes)`
 })
 
-// === RESET DEL FLUJO ===
 const resetFlow = () => {
-  // Resetea el objeto reactivo manteniendo las keys
   Object.assign(form, createInitialForm())
   step.value = 1
   isCompleted.value = false
@@ -511,7 +500,7 @@ const resetFlow = () => {
   border-radius: 18px;
   padding: 24px 22px 20px;
   background: #ffffff;
-  border: 1px solid rgba(42, 124, 65, 0.18); /* #2a7c41 suave */
+  border: 1px solid rgba(42, 124, 65, 0.18);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
 }
 
@@ -592,7 +581,6 @@ const resetFlow = () => {
   color: #c62828;
 }
 
-/* ESTADO DE ÉXITO */
 .success-body {
   text-align: center;
   padding-top: 8px;
@@ -667,5 +655,16 @@ const resetFlow = () => {
   .success-summary {
     font-size: 0.76rem;
   }
+}
+</style>
+
+<!-- ESTOS ESTILOS NO ESTÁN "scoped": limpian el fondo blanco del v-app -->
+<style>
+.solar-app,
+.solar-app .v-application__wrap,
+.solar-app .v-main,
+.solar-app .v-container {
+  background: transparent !important;
+  box-shadow: none;
 }
 </style>
