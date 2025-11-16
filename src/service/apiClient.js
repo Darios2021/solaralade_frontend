@@ -7,7 +7,7 @@ const API_BASE_URL =
   // 2) Si lo definís desde WP (window.SOLAR_CALCULATOR_API_BASE)
   (typeof window !== 'undefined' && window.SOLAR_CALCULATOR_API_BASE) ||
   // 3) Fallback producción
-  'https://solar-backend.cingulado.org';
+  'https://solar-backend.cingulado.org'
 
 // Enviar lead del simulador solar
 export async function postLead(payload) {
@@ -17,24 +17,24 @@ export async function postLead(payload) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
-  });
+  })
 
-  let data = null;
+  let data = null
   try {
-    data = await res.json();
+    data = await res.json()
   } catch {
-    data = null;
+    data = null
   }
 
   if (!res.ok) {
     const msg =
       (data && (data.message || data.error)) ||
-      `Error HTTP ${res.status} al contactar API`;
-    const error = new Error(msg);
-    error.status = res.status;
-    error.data = data;
-    throw error;
+      `Error HTTP ${res.status} al contactar API`
+    const error = new Error(msg)
+    error.status = res.status
+    error.data = data
+    throw error
   }
 
-  return data || { ok: true };
+  return data || { ok: true }
 }

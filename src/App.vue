@@ -67,7 +67,7 @@
                 :items="purposes"
                 item-title="label"
                 item-value="value"
-                label="¿Para qué querés un sistema solar fotovoltaico?"
+                label="¿Para qué querés un sistema Solar fotovoltaico?"
                 variant="outlined"
                 density="comfortable"
                 hide-details="auto"
@@ -214,20 +214,11 @@
         </p>
 
         <div class="success-actions">
-          <v-btn
-            variant="text"
-            class="mr-2"
-            @click="closeOnly"
-          >
+          <v-btn variant="text" class="mr-2" @click="closeOnly">
             Cerrar
           </v-btn>
 
-          <v-btn
-            class="submit-btn"
-            color="primary"
-            variant="flat"
-            @click="resetFlow"
-          >
+          <v-btn class="submit-btn" color="primary" variant="flat" @click="resetFlow">
             Hacer otra simulación
           </v-btn>
         </div>
@@ -239,6 +230,13 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { postLead } from './service/apiClient'
+import {
+  estimateMonthlyKwh,
+  estimateSystemSizeKw,
+  estimatePanels,
+  estimateYearlyKwh,
+  estimateYearlySavingsArs,
+} from './service/solarMath'
 
 const step = ref(1)
 const totalSteps = 4
@@ -262,6 +260,10 @@ const createInitialForm = () => ({
 
 const form = reactive(createInitialForm())
 
+// =======================
+//   OPCIONES DE SELECTS
+// =======================
+
 const provinces = [
   { value: 'BA', label: 'Buenos Aires' },
   { value: 'CABA', label: 'CABA' },
@@ -284,12 +286,12 @@ const purposes = [
 ]
 
 const usages = [
-  { value: 'home',     label: 'Mi casa',                         segment: 'Residencial' },
-  { value: 'commerce', label: 'Mi comercio',                     segment: 'Comercial' },
-  { value: 'company',  label: 'Mi empresa',                      segment: 'Comercial' },
-  { value: 'weekend',  label: 'Mi casa de fin de semana o veraneo', segment: 'Residencial' },
-  { value: 'agro',     label: 'Para establecimientos agrícolas', segment: 'Agro / Rural' },
-  { value: 'other',    label: 'Otros',                           segment: 'Otros' },
+  { value: 'home',     label: 'Mi casa',                               segment: 'Residencial' },
+  { value: 'commerce', label: 'Mi comercio',                           segment: 'Comercial' },
+  { value: 'company',  label: 'Mi empresa',                            segment: 'Comercial' },
+  { value: 'weekend',  label: 'Mi casa de fin de semana o veraneo',    segment: 'Residencial' },
+  { value: 'agro',     label: 'Para establecimientos agrícolas',       segment: 'Agro / Rural' },
+  { value: 'other',    label: 'Otros',                                 segment: 'Otros' },
 ]
 
 const purposeMap = computed(() =>
@@ -299,13 +301,20 @@ const usageMap = computed(() =>
   Object.fromEntries(usages.map(u => [u.value, u]))
 )
 
+// =======================
+//   VALIDACIONES
+// =======================
+
 const rules = {
   required: v => !!v || 'Campo obligatorio',
   requiredNumber: v =>
     (v !== null && v !== '' && !isNaN(Number(v))) || 'Ingresá un valor numérico',
-  email: v =>
-    !v || /.+@.+\..+/.test(v) || 'Email inválido',
+  email: v => !v || /.+@.+\..+/.test(v) || 'Email inválido',
 }
+
+// =======================
+//   NAVEGACIÓN DE PASOS
+// =======================
 
 const goNext = async () => {
   errorMessage.value = ''
@@ -325,22 +334,13 @@ const goPrev = () => {
   }
 }
 
-function estimateMonthlyKwh(billArs) {
-  const bill = Number(billArs) || 0
-  const avgTariff = 120 // ARS/kWh aprox
-  if (!bill) return null
-  return Math.round(bill / avgTariff)
-}
+// =======================
+//   LÓGICA DE PRIORIDAD / CRM
+// =======================
 
-function estimateSystemSizeKw(monthlyKwh) {
-  if (!monthlyKwh) return null
-  const kwhPerKw = 130 // kWh/mes por kWp (aprox)
-  return Number((monthlyKwh / kwhPerKw).toFixed(1))
-}
-
-function estimatePriority(purpose, monthlyBill) {
+function estimatePriority(purposeValue, monthlyBill) {
   const bill = Number(monthlyBill) || 0
-  const driver = purposeMap.value[purpose]?.driver
+  const driver = purposeMap.value[purposeValue]?.driver
 
   if (bill > 60000 || driver === 'mixto') return 'Muy alta'
   if (bill > 30000 || driver === 'ahorro' || driver === 'autonomia') return 'Alta'
@@ -349,15 +349,66 @@ function estimatePriority(purpose, monthlyBill) {
   return 'A evaluar'
 }
 
+function mapPropertyType(usageValue) {
+  switch (usageValue) {
+    case 'home':
+      return 'Hogar'
+    case 'weekend':
+      return 'Hogar fin de semana'
+    case 'commerce':
+    case 'company':
+      return 'Comercial / Empresa'
+    case 'agro':
+      return 'Campo / Agro'
+    case 'other':
+    default:
+      return 'Otros'
+  }
+}
+
+function mapCrmScore(priorityLabel) {
+  const k = String(priorityLabel || '').toLowerCase()
+  if (k.includes('muy alta')) return 90
+  if (k.includes('alta')) return 75
+  if (k.includes('proyecto')) return 65
+  if (k.includes('media')) return 50
+  return 40
+}
+
+function buildCrmTags(usage, purpose, segment) {
+  const tags = ['web', 'simulador-solar']
+  if (usage?.value) tags.push(`uso:${usage.value}`)
+  if (segment) tags.push(`segmento:${segment}`)
+  if (purpose?.driver) tags.push(`driver:${purpose.driver}`)
+  return tags.join(', ')
+}
+
+// =======================
+//   ARMADO DEL PAYLOAD
+// =======================
+
 function buildLeadPayload() {
   const province = provinces.find(p => p.value === form.province) || null
   const country = countries.find(c => c.value === form.country) || null
   const purpose = purposeMap.value[form.purpose] || null
   const usage = usageMap.value[form.usage] || null
 
-  const monthlyKwh = estimateMonthlyKwh(form.currentBill)
+  const monthlyBillNumber = form.currentBill ? Number(form.currentBill) : null
+
+  // Cálculos energéticos
+  const monthlyKwh = estimateMonthlyKwh(monthlyBillNumber)
   const systemSizeKw = estimateSystemSizeKw(monthlyKwh)
   const priority = estimatePriority(form.purpose, form.currentBill)
+
+  const panels = estimatePanels(systemSizeKw)
+  const yearlyKwh = estimateYearlyKwh(monthlyKwh)
+  const yearlySavings = estimateYearlySavingsArs(monthlyBillNumber)
+  const propertyType = mapPropertyType(form.usage)
+
+  // CRM básico
+  const crmStatus = 'nuevo'
+  const crmScore = mapCrmScore(priority)
+  const tags = buildCrmTags(usage, purpose, usage?.segment)
 
   return {
     location: {
@@ -374,24 +425,45 @@ function buildLeadPayload() {
       usageCode: usage?.value || null,
       usageLabel: usage?.label || null,
       segment: usage?.segment || null,
-      monthlyBillArs: form.currentBill ? Number(form.currentBill) : null,
-      estimatedMonthlyKwh: monthlyKwh,
+      propertyType,
+
+      monthlyBillArs: monthlyBillNumber,
       estimatedMonthlyKwh: monthlyKwh,
       estimatedSystemSizeKw: systemSizeKw,
       priority,
+
+      estimatedPanels: panels,
+      estimatedInverterKw: systemSizeKw ? Number(systemSizeKw.toFixed(1)) : null,
+      estimatedYearlyKwh: yearlyKwh,
+      estimatedYearlySavingsArs: yearlySavings,
+      paybackYears: null, // lo podemos calcular mejor más adelante
     },
     contact: {
       fullName: form.fullName,
       phone: form.phone,
       email: form.email,
     },
+    crm: {
+      crmStatus,
+      crmScore,
+      assignedTo: null,
+      lastContactAt: null,
+      nextActionAt: null,
+      nextActionType: null,
+      internalNotes: null,
+      tags,
+    },
     meta: {
       createdAt: new Date().toISOString(),
-      sourceUrl: window.location.href,
+      sourceUrl: typeof window !== 'undefined' ? window.location.href : null,
       sourceTag: 'web-grupoalade-simulador-solar',
     },
   }
 }
+
+// =======================
+//   ENVÍO
+// =======================
 
 const handleSubmit = async () => {
   errorMessage.value = ''
@@ -415,9 +487,14 @@ const handleSubmit = async () => {
 
     console.log('[solar-calculator] Lead generado', data)
 
-    window.dispatchEvent(
-      new CustomEvent('solar-calculator:lead', { detail: data.lead || payload })
-    )
+    // evento para integraciones externas
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('solar-calculator:lead', {
+          detail: data.lead || payload,
+        }),
+      )
+    }
 
     lastLead.value = data.lead || payload
     showSuccess.value = true
@@ -430,7 +507,10 @@ const handleSubmit = async () => {
   }
 }
 
-// RESÚMENES PARA EL MODAL
+// =======================
+//   RESÚMENES PARA MODAL
+// =======================
+
 const summaryLocation = computed(() => {
   const province = provinces.find(p => p.value === form.province)
   const country = countries.find(c => c.value === form.country)
@@ -442,9 +522,7 @@ const summaryUsage = computed(() => {
   const usage = usageMap.value[form.usage]
   const purpose = purposeMap.value[form.purpose]
   if (!usage && !purpose) return 'Sin datos'
-  if (usage && purpose) {
-    return `${usage.label} · ${purpose.label}`
-  }
+  if (usage && purpose) return `${usage.label} · ${purpose.label}`
   return (usage?.label || purpose?.label) ?? 'Sin datos'
 })
 
@@ -454,20 +532,27 @@ const summaryBill = computed(() => {
   return `Aprox. $${n.toLocaleString('es-AR')} / mes`
 })
 
+// Para vista previa y resumen
 const previewKwh = computed(() => estimateMonthlyKwh(form.currentBill))
-const previewSystemSize = computed(() => estimateSystemSizeKw(previewKwh.value))
+const previewSystemSize = computed(() =>
+  estimateSystemSizeKw(previewKwh.value),
+)
 
 const summarySystemSize = computed(() => {
-  if (!previewSystemSize.value || !previewKwh.value) return 'A estimar con más detalle'
+  if (!previewSystemSize.value || !previewKwh.value) {
+    return 'A estimar con más detalle'
+  }
   return `${previewSystemSize.value} kWp (≈ ${previewKwh.value} kWh/mes)`
 })
 
-// cerrar solo el modal, sin borrar datos (por si la persona quiere sacar captura)
+// =======================
+//   RESET / MODAL
+// =======================
+
 const closeOnly = () => {
   showSuccess.value = false
 }
 
-// reset total para otra simulación
 const resetFlow = () => {
   showSuccess.value = false
   Object.assign(form, createInitialForm())
@@ -592,9 +677,18 @@ const resetFlow = () => {
 }
 
 @keyframes pop-in {
-  0%   { transform: scale(0.4); opacity: 0; }
-  60%  { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(1);   opacity: 1; }
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .success-title {
@@ -726,7 +820,7 @@ const resetFlow = () => {
 }
 </style>
 
-<!-- Estilos globales para blindar contra Elementor (incluye tamaños de botón más chicos) -->
+<!-- Estilos globales para blindar contra Elementor -->
 <style>
 /* Caja del simulador: fondo transparente */
 #solar-calculator .solar-app,
