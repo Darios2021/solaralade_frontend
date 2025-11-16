@@ -510,62 +510,93 @@ const resetCalcForm = () => {
 </script>
 
 <style scoped>
+/* ============================================
+   CONTENEDOR GENERAL
+============================================ */
 .calc-view {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  width: 100%;
 }
 
-/* Forzamos contra estilos de Elementor */
+/* ============================================
+   CABECERA
+============================================ */
 .aux-header {
   margin-bottom: 4px;
 }
 
 .aux-title {
-  margin: 0 0 4px;
-  font-size: 1.05rem !important;
-  line-height: 1.3 !important;
+  margin: 0 0 6px;
+  font-size: 1.15rem !important;
   font-weight: 700 !important;
+  line-height: 1.3 !important;
   color: #1a5934 !important;
 }
 
 .aux-subtitle {
   margin: 0;
-  font-size: 0.85rem !important;
-  line-height: 1.4 !important;
+  font-size: 0.88rem !important;
+  line-height: 1.45 !important;
   color: #4f4f4f !important;
 }
 
+/* ============================================
+   FORMULARIO
+============================================ */
 .calc-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .calc-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-/* Bloque resultados */
+/* Inputs más prolijos */
+:deep(.v-input),
+:deep(.v-text-field),
+:deep(.v-select) {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Caja base del input */
+:deep(.v-field) {
+  border-radius: 10px !important;
+  transition: border-color 0.2s ease;
+}
+
+/* Placeholder */
+:deep(input::placeholder) {
+  opacity: 0.55;
+}
+
+/* ============================================
+   BLOQUE RESULTADOS
+============================================ */
 .calc-summary-wrapper {
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .calc-summary {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 12px;
   background: #f5fbf7;
-  border: 1px solid rgba(42, 124, 65, 0.16);
-  font-size: 0.8rem;
+  border: 1px solid rgba(42, 124, 65, 0.18);
+  font-size: 0.82rem;
 }
 
 .calc-row {
   display: flex;
   justify-content: space-between;
   gap: 6px;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 
 .calc-row:last-child {
@@ -579,60 +610,75 @@ const resetCalcForm = () => {
 
 .calc-value {
   text-align: right;
-  color: #333;
+  color: #2a2a2a;
+  font-weight: 500;
 }
 
 .calc-hint {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 10px;
-  background: #f9faf9;
-  border: 1px dashed rgba(42, 124, 65, 0.4);
-  font-size: 0.8rem;
+  background: #fafcf9;
+  border: 1px dashed rgba(42, 124, 65, 0.35);
+  font-size: 0.82rem;
   color: #555;
 }
 
-/* Mensajes */
+/* ============================================
+   MENSAJES
+============================================ */
 .error-message {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 0.78rem;
   color: #c62828;
 }
 
 .success-message {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 0.78rem;
   color: #2a7c41;
 }
 
-/* Acciones */
+/* ============================================
+   ACCIONES
+============================================ */
 .aux-actions {
   margin-top: 6px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .submit-btn {
-  font-weight: 600;
-  text-transform: none;
-  min-height: 34px;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  min-height: 36px !important;
+  border-radius: 999px !important;
 }
 
 .secondary-btn {
-  text-transform: none;
-  font-size: 0.8rem;
+  text-transform: none !important;
+  font-size: 0.82rem !important;
+  border-radius: 999px !important;
 }
 
-/* Responsive: dos columnas en desktop */
+/* ============================================
+   DESKTOP (2 columnas)
+============================================ */
 @media (min-width: 720px) {
   .calc-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px 12px;
+    gap: 14px 16px;
   }
 
+  /* Factura de luz ocupa todo el ancho */
   .calc-grid > *:nth-child(5) {
     grid-column: 1 / -1;
   }
+
+  .aux-title {
+    font-size: 1.25rem !important;
+  }
 }
 </style>
+
