@@ -2,34 +2,37 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vuetify from 'vite-plugin-vuetify'
 
-export default defineConfig({
-  plugins: [
-    vue(),
-    vuetify({ autoImport: true })
-  ],
+// Build única → una entrada por vez
+export default defineConfig(({ mode }) => {
+  const isCalculator = mode === 'calculator'
+  const isGreen = mode === 'green'
 
-  build: {
-    outDir: 'dist',
+  return {
+    plugins: [
+      vue(),
+      vuetify({ autoImport: true }),
+    ],
 
-    rollupOptions: {
-      input: {
-        calculator: 'src/main.js',
-        solarGreen: 'src/mountSolarGreen.js'
+    build: {
+      outDir: 'dist',
+      emptyOutDir: false, // ⬅ no borra los otros bundles
+      lib: {
+        entry: isCalculator
+          ? 'src/apps/calculatorApp.js'
+          : 'src/apps/greenLandingApp.js',
+
+        name: isCalculator ? 'SolarCalculator' : 'SolarGreenLanding',
+
+        formats: ['iife'],
+
+        fileName: () =>
+          isCalculator ? 'solar-calculator.js' : 'solar-green.js',
       },
-
-      output: {
-        format: 'iife',
-
-        entryFileNames: (chunk) => {
-          if (chunk.name === 'calculator') return 'solar-calculator.js'
-          if (chunk.name === 'solarGreen') return 'solar-green.js'
-          return '[name].js'
+      rollupOptions: {
+        output: {
+          assetFileNames: 'assets/[name].[ext]',
         },
-
-        assetFileNames: 'assets/[name].[ext]',
-      }
-    }
-  },
-
-  base: '/'
+      },
+    },
+  }
 })
