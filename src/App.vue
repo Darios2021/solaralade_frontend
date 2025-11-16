@@ -12,12 +12,8 @@
             </p>
           </div>
 
-          <!-- FORMULARIO / FLUJO PRINCIPAL -->
-          <v-form
-            v-if="!isCompleted"
-            ref="formRef"
-            class="form-body"
-          >
+          <!-- FORMULARIO -->
+          <v-form ref="formRef" class="form-body">
             <!-- Indicador de pasos -->
             <div class="step-indicator">
               <span
@@ -165,62 +161,78 @@
               {{ errorMessage }}
             </p>
           </v-form>
-
-          <!-- ESTADO DE ÉXITO / CONFIRMACIÓN -->
-          <div v-else class="success-body">
-            <div class="success-icon-wrap">
-              <v-icon size="40" class="success-icon">mdi-check-circle</v-icon>
-            </div>
-            <h3 class="success-title">
-              ¡Gracias{{ form.fullName ? `, ${form.fullName}` : '' }}!
-            </h3>
-            <p class="success-copy">
-              Recibimos tu solicitud de cotización. Un asesor de Grupo Alade se
-              va a contactar al
-              <strong>{{ form.phone || 'teléfono que nos indicaste' }}</strong>
-              <span v-if="form.email">
-                y al correo <strong>{{ form.email }}</strong>
-              </span>
-              en las próximas horas hábiles.
-            </p>
-
-            <div class="success-summary">
-              <div class="success-row">
-                <span class="success-label">Ubicación</span>
-                <span class="success-value">{{ summaryLocation }}</span>
-              </div>
-              <div class="success-row">
-                <span class="success-label">Uso del sistema</span>
-                <span class="success-value">{{ summaryUsage }}</span>
-              </div>
-              <div class="success-row">
-                <span class="success-label">Factura actual</span>
-                <span class="success-value">{{ summaryBill }}</span>
-              </div>
-              <div class="success-row">
-                <span class="success-label">Tamaño estimado del sistema</span>
-                <span class="success-value">
-                  {{ summarySystemSize }}
-                </span>
-              </div>
-            </div>
-
-            <p class="success-footnote">
-              Podés cerrar esta ventana, no necesitás hacer nada más.
-            </p>
-
-            <v-btn
-              class="submit-btn mt-4"
-              color="primary"
-              variant="flat"
-              @click="resetFlow"
-            >
-              Hacer otra simulación
-            </v-btn>
-          </div>
         </v-card>
       </div>
     </v-container>
+
+    <!-- MODAL DE ÉXITO -->
+    <v-dialog
+      v-model="showSuccess"
+      max-width="430"
+      persistent
+      transition="scale-transition"
+    >
+      <v-card class="success-card">
+        <div class="success-icon-wrap">
+          <v-icon size="46" class="success-icon">mdi-check-circle</v-icon>
+        </div>
+        <h3 class="success-title">
+          ¡Gracias{{ form.fullName ? `, ${form.fullName}` : '' }}!
+        </h3>
+
+        <p class="success-copy">
+          Recibimos tu solicitud de cotización. Un asesor de Grupo Alade se va a
+          contactar al
+          <strong>{{ form.phone || 'teléfono que nos indicaste' }}</strong>
+          <span v-if="form.email">
+            y al correo <strong>{{ form.email }}</strong>
+          </span>
+          en las próximas horas hábiles.
+        </p>
+
+        <div class="success-summary">
+          <div class="success-row">
+            <span class="success-label">Ubicación</span>
+            <span class="success-value">{{ summaryLocation }}</span>
+          </div>
+          <div class="success-row">
+            <span class="success-label">Uso del sistema</span>
+            <span class="success-value">{{ summaryUsage }}</span>
+          </div>
+          <div class="success-row">
+            <span class="success-label">Factura actual</span>
+            <span class="success-value">{{ summaryBill }}</span>
+          </div>
+          <div class="success-row">
+            <span class="success-label">Tamaño estimado</span>
+            <span class="success-value">{{ summarySystemSize }}</span>
+          </div>
+        </div>
+
+        <p class="success-footnote">
+          Podés cerrar esta ventana, no necesitás hacer nada más.
+        </p>
+
+        <div class="success-actions">
+          <v-btn
+            variant="text"
+            class="mr-2"
+            @click="closeOnly"
+          >
+            Cerrar
+          </v-btn>
+
+          <v-btn
+            class="submit-btn"
+            color="primary"
+            variant="flat"
+            @click="resetFlow"
+          >
+            Hacer otra simulación
+          </v-btn>
+        </div>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
@@ -233,7 +245,7 @@ const totalSteps = 4
 const formRef = ref(null)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
-const isCompleted = ref(false)
+const showSuccess = ref(false)
 const lastLead = ref(null)
 
 const createInitialForm = () => ({
@@ -262,50 +274,22 @@ const provinces = [
 const countries = [{ value: 'AR', label: 'Argentina' }]
 
 const purposes = [
-  {
-    value: '1',
-    label: '1 - Para bajar la huella de carbono.',
-    driver: 'sustentabilidad',
-  },
-  {
-    value: '2',
-    label: '2 - Para generar un ahorro en la factura eléctrica.',
-    driver: 'ahorro',
-  },
-  {
-    value: '3',
-    label: '3 - Para tener autonomía en caso de cortes de servicio.',
-    driver: 'autonomia',
-  },
-  {
-    value: '4',
-    label: '4 - Para tener energía donde no llega la red.',
-    driver: 'offgrid',
-  },
+  { value: '1', label: '1 - Para bajar la huella de carbono.', driver: 'sustentabilidad' },
+  { value: '2', label: '2 - Para generar un ahorro en la factura eléctrica.', driver: 'ahorro' },
+  { value: '3', label: '3 - Para tener autonomía en caso de cortes de servicio.', driver: 'autonomia' },
+  { value: '4', label: '4 - Para tener energía donde no llega la red.', driver: 'offgrid' },
   { value: '5', label: '5 - Para un motor home.', driver: 'movil' },
   { value: '6', label: '6 - Bombeo solar para campos.', driver: 'bombeo' },
-  {
-    value: '7',
-    label: '7 - Opciones 1, 2, 3 y 4.',
-    driver: 'mixto',
-  },
+  { value: '7', label: '7 - Opciones 1, 2, 3 y 4.', driver: 'mixto' },
 ]
 
 const usages = [
-  { value: 'home', label: 'Mi casa', segment: 'Residencial' },
-  { value: 'commerce', label: 'Mi comercio', segment: 'Comercial' },
-  { value: 'company', label: 'Mi empresa', segment: 'Comercial' },
-  {
-    value: 'weekend',
-    label: 'Mi casa de fin de semana o veraneo',
-    segment: 'Residencial',
-  },
-  {
-    value: 'agro',
-    label: 'Para establecimientos agrícolas',
-    segment: 'Agro / Rural',
-  },
-  { value: 'other', label: 'Otros', segment: 'Otros' },
+  { value: 'home',     label: 'Mi casa',                         segment: 'Residencial' },
+  { value: 'commerce', label: 'Mi comercio',                     segment: 'Comercial' },
+  { value: 'company',  label: 'Mi empresa',                      segment: 'Comercial' },
+  { value: 'weekend',  label: 'Mi casa de fin de semana o veraneo', segment: 'Residencial' },
+  { value: 'agro',     label: 'Para establecimientos agrícolas', segment: 'Agro / Rural' },
+  { value: 'other',    label: 'Otros',                           segment: 'Otros' },
 ]
 
 const purposeMap = computed(() =>
@@ -343,14 +327,14 @@ const goPrev = () => {
 
 function estimateMonthlyKwh(billArs) {
   const bill = Number(billArs) || 0
-  const avgTariff = 120
+  const avgTariff = 120 // ARS/kWh aprox
   if (!bill) return null
   return Math.round(bill / avgTariff)
 }
 
 function estimateSystemSizeKw(monthlyKwh) {
   if (!monthlyKwh) return null
-  const kwhPerKw = 130
+  const kwhPerKw = 130 // kWh/mes por kWp (aprox)
   return Number((monthlyKwh / kwhPerKw).toFixed(1))
 }
 
@@ -435,7 +419,7 @@ const handleSubmit = async () => {
     )
 
     lastLead.value = data.lead || payload
-    isCompleted.value = true
+    showSuccess.value = true
   } catch (err) {
     console.error('[solar-calculator] Error al enviar lead:', err)
     errorMessage.value =
@@ -445,6 +429,7 @@ const handleSubmit = async () => {
   }
 }
 
+// RESÚMENES PARA EL MODAL
 const summaryLocation = computed(() => {
   const province = provinces.find(p => p.value === form.province)
   const country = countries.find(c => c.value === form.country)
@@ -476,10 +461,16 @@ const summarySystemSize = computed(() => {
   return `${previewSystemSize.value} kWp (≈ ${previewKwh.value} kWh/mes)`
 })
 
+// cerrar solo el modal, sin borrar datos (por si la persona quiere sacar captura)
+const closeOnly = () => {
+  showSuccess.value = false
+}
+
+// reset total para otra simulación
 const resetFlow = () => {
+  showSuccess.value = false
   Object.assign(form, createInitialForm())
   step.value = 1
-  isCompleted.value = false
   errorMessage.value = ''
   lastLead.value = null
   formRef.value?.resetValidation()
@@ -581,9 +572,10 @@ const resetFlow = () => {
   color: #c62828;
 }
 
-.success-body {
-  text-align: center;
-  padding-top: 8px;
+/* MODAL ÉXITO */
+.success-card {
+  padding: 20px 20px 18px;
+  border-radius: 18px;
 }
 
 .success-icon-wrap {
@@ -594,12 +586,20 @@ const resetFlow = () => {
 
 .success-icon {
   color: #2a7c41;
+  animation: pop-in 0.45s ease-out;
+}
+
+@keyframes pop-in {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
 }
 
 .success-title {
   margin: 4px 0 6px;
   font-size: 1.2rem;
   font-weight: 800;
+  text-align: center;
   color: #1a5934;
 }
 
@@ -607,6 +607,7 @@ const resetFlow = () => {
   margin: 0 auto 14px;
   font-size: 0.86rem;
   color: #444;
+  text-align: center;
 }
 
 .success-summary {
@@ -616,7 +617,6 @@ const resetFlow = () => {
   background: #f5fbf7;
   border: 1px solid rgba(42, 124, 65, 0.16);
   font-size: 0.78rem;
-  text-align: left;
 }
 
 .success-row {
@@ -641,9 +641,16 @@ const resetFlow = () => {
 }
 
 .success-footnote {
-  margin: 0 0 6px;
+  margin: 4px 0 10px;
   font-size: 0.75rem;
   color: #666;
+  text-align: center;
+}
+
+.success-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 @media (max-width: 600px) {
@@ -658,7 +665,7 @@ const resetFlow = () => {
 }
 </style>
 
-<!-- ESTOS ESTILOS NO ESTÁN "scoped": limpian el fondo blanco del v-app -->
+<!-- Limpia el fondo blanco del v-app al estar embebido en Elementor -->
 <style>
 .solar-app,
 .solar-app .v-application__wrap,
