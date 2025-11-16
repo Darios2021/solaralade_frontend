@@ -189,44 +189,48 @@
             Preguntas frecuentes
           </div>
 
-          <v-expansion-panels
-            variant="accordion"
-            class="faq-panels"
-          >
-            <v-expansion-panel>
-              <v-expansion-panel-title>
-                ¿Tengo que cambiar toda mi instalación eléctrica?
-              </v-expansion-panel-title>
-              <v-expansion-panel-text class="text-body-2 text-medium-emphasis">
-                No. El sistema se integra a tu tablero actual. Sólo se hacen
-                adecuaciones puntuales para garantizar seguridad y
-                funcionamiento óptimo según la normativa vigente.
-              </v-expansion-panel-text>
-            </v-expansion-panel>
+          <!-- wrapper para poder pisar estilos de WP -->
+          <div class="faq-wrapper">
+            <v-expansion-panels
+              variant="accordion"
+              class="faq-panels"
+            >
+              <v-expansion-panel class="faq-item" elevation="0">
+                <v-expansion-panel-title>
+                  ¿Tengo que cambiar toda mi instalación eléctrica?
+                </v-expansion-panel-title>
+                <v-expansion-panel-text class="text-body-2 text-medium-emphasis">
+                  No. El sistema se integra a tu tablero actual. Sólo se hacen
+                  adecuaciones puntuales para garantizar seguridad y
+                  funcionamiento óptimo según la normativa vigente.
+                </v-expansion-panel-text>
+              </v-expansion-panel>
 
-            <v-expansion-panel>
-              <v-expansion-panel-title>
-                ¿Qué pasa cuando está nublado o es de noche?
-              </v-expansion-panel-title>
-              <v-expansion-panel-text class="text-body-2 text-medium-emphasis">
-                La generación baja cuando hay poca radiación, y es nula de
-                noche. Por eso el sistema trabaja en conjunto con la red
-                eléctrica convencional y, si lo deseás, con baterías de
-                respaldo.
-              </v-expansion-panel-text>
-            </v-expansion-panel>
+              <v-expansion-panel class="faq-item" elevation="0">
+                <v-expansion-panel-title>
+                  ¿Qué pasa cuando está nublado o es de noche?
+                </v-expansion-panel-title>
+                <v-expansion-panel-text class="text-body-2 text-medium-emphasis">
+                  La generación baja cuando hay poca radiación, y es nula de
+                  noche. Por eso el sistema trabaja en conjunto con la red
+                  eléctrica convencional y, si lo deseás, con baterías de
+                  respaldo.
+                </v-expansion-panel-text>
+              </v-expansion-panel>
 
-            <v-expansion-panel>
-              <v-expansion-panel-title>
-                ¿En cuánto tiempo se recupera la inversión?
-              </v-expansion-panel-title>
-              <v-expansion-panel-text class="text-body-2 text-medium-emphasis">
-                Depende del consumo, la tarifa y el tipo de usuario. En muchos
-                casos el retorno se observa en un rango de algunos años, y luego
-                el sistema continúa generando ahorro durante su vida útil.
-              </v-expansion-panel-text>
-            </v-expansion-panel>
-          </v-expansion-panels>
+              <v-expansion-panel class="faq-item" elevation="0">
+                <v-expansion-panel-title>
+                  ¿En cuánto tiempo se recupera la inversión?
+                </v-expansion-panel-title>
+                <v-expansion-panel-text class="text-body-2 text-medium-emphasis">
+                  Depende del consumo, la tarifa y el tipo de usuario. En muchos
+                  casos el retorno se observa en un rango de algunos años, y
+                  luego el sistema continúa generando ahorro durante su vida
+                  útil.
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
         </v-container>
       </section>
 
@@ -400,33 +404,42 @@ function scrollToInfo() {
 }
 
 /* FAQ panels */
-.faq-panels {
-  max-width: 900px;
+.faq-wrapper {
+  max-width: 980px;
   margin: 0 auto;
 }
 
-:deep(.faq-panels .v-expansion-panel) {
+/* Sacamos cualquier fondo/borde heredado de WP */
+:deep(.faq-wrapper * ) {
+  box-shadow: none;
+}
+
+/* panel base */
+:deep(.faq-panels .faq-item) {
   background-color: #ffffff !important;
-  border-radius: 12px;
-  margin-bottom: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px !important;
+  margin-bottom: 10px !important;
+  border: 1px solid #e0e0e0 !important;
 }
 
-:deep(.faq-panels .v-expansion-panel-title) {
-  color: #1a5634;
-  font-weight: 500;
-  font-size: 0.95rem;
-}
-
-:deep(.faq-panels .v-expansion-panel-title__overlay) {
+/* título del panel */
+:deep(.faq-panels .faq-item .v-expansion-panel-title) {
   background-color: transparent !important;
+  color: #1a5634 !important;
+  font-weight: 500 !important;
+  font-size: 0.98rem !important;
+  min-height: 52px !important;
 }
 
-:deep(.faq-panels .v-expansion-panel--active .v-expansion-panel-title) {
-  color: #ffffff;
-  background-color: #1a5634;
-  border-radius: 12px 12px 0 0;
+/* overlay hover de Vuetify */
+:deep(.faq-panels .v-expansion-panel-title__overlay) {
+  background: transparent !important;
+}
+
+/* cuando está activo: borde verde, pero NO fondo verde */
+:deep(.faq-panels .faq-item.v-expansion-panel--active) {
+  border-color: #1a5634 !important;
+  background-color: #ffffff !important;
 }
 
 /* CTA final */
@@ -454,7 +467,6 @@ function scrollToInfo() {
 
 /* -------- Overrides específicos del FORM (botones/textos) -------- */
 
-/* evitar subrayados y herencias raras de WP */
 #solar-calculator :deep(a),
 #solar-calculator :deep(button),
 #solar-calculator :deep(.v-btn),
@@ -468,7 +480,7 @@ function scrollToInfo() {
   color: #1a5634;
 }
 
-/* botón principal "Ver mi ahorro y que me contacten" (elevated) */
+/* botón principal "Ver mi ahorro..." */
 #solar-calculator :deep(.v-btn.v-btn--elevated),
 #solar-calculator :deep(.v-btn.v-btn--flat.primary),
 #solar-calculator :deep(.v-btn.v-btn--flat.bg-primary) {
@@ -481,7 +493,7 @@ function scrollToInfo() {
   letter-spacing: 0.02em;
 }
 
-/* otros botones dentro del form: que sigan el mismo estilo suave */
+/* todos los botones del form redonditos */
 #solar-calculator :deep(.v-btn) {
   border-radius: 999px !important;
 }
@@ -491,7 +503,7 @@ function scrollToInfo() {
   border-radius: 14px !important;
 }
 
-/* evitar sombras raras en componentes dentro del simulador */
+/* sin sombras fuertes */
 #solar-calculator :deep(.v-field),
 #solar-calculator :deep(.v-btn) {
   box-shadow: none !important;
