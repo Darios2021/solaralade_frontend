@@ -174,7 +174,7 @@
     >
       <v-card class="success-card">
         <div class="success-icon-wrap">
-          <v-icon size="46" class="success-icon">mdi-check-circle</v-icon>
+          <v-icon size="40" class="success-icon">mdi-check-circle</v-icon>
         </div>
         <h3 class="success-title">
           ¡Gracias{{ form.fullName ? `, ${form.fullName}` : '' }}!
@@ -376,6 +376,7 @@ function buildLeadPayload() {
       segment: usage?.segment || null,
       monthlyBillArs: form.currentBill ? Number(form.currentBill) : null,
       estimatedMonthlyKwh: monthlyKwh,
+      estimatedMonthlyKwh: monthlyKwh,
       estimatedSystemSizeKw: systemSizeKw,
       priority,
     },
@@ -559,8 +560,9 @@ const resetFlow = () => {
   color: #1a5934;
 }
 
+/* BOTÓN principal más chico */
 .submit-btn {
-  min-width: 170px;
+  min-width: 140px;
   font-weight: 600;
   color: #ffffff;
   text-transform: none;
@@ -574,14 +576,14 @@ const resetFlow = () => {
 
 /* MODAL ÉXITO */
 .success-card {
-  padding: 20px 20px 18px;
-  border-radius: 18px;
+  padding: 18px 18px 16px;
+  border-radius: 16px;
 }
 
 .success-icon-wrap {
   display: flex;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .success-icon {
@@ -597,22 +599,22 @@ const resetFlow = () => {
 
 .success-title {
   margin: 4px 0 6px;
-  font-size: 1.2rem;
+  font-size: 1.12rem;
   font-weight: 800;
   text-align: center;
   color: #1a5934;
 }
 
 .success-copy {
-  margin: 0 auto 14px;
-  font-size: 0.86rem;
+  margin: 0 auto 12px;
+  font-size: 0.84rem;
   color: #444;
   text-align: center;
 }
 
 .success-summary {
-  margin: 0 auto 12px;
-  padding: 10px 12px;
+  margin: 0 auto 10px;
+  padding: 8px 10px;
   border-radius: 12px;
   background: #f5fbf7;
   border: 1px solid rgba(42, 124, 65, 0.16);
@@ -623,7 +625,7 @@ const resetFlow = () => {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .success-row:last-child {
@@ -641,7 +643,7 @@ const resetFlow = () => {
 }
 
 .success-footnote {
-  margin: 4px 0 10px;
+  margin: 4px 0 8px;
   font-size: 0.75rem;
   color: #666;
   text-align: center;
@@ -651,6 +653,7 @@ const resetFlow = () => {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 8px;
 }
 
 /* TABLET */
@@ -662,7 +665,6 @@ const resetFlow = () => {
   .form-card {
     max-width: 520px;
     width: 100%;
-    border-radius: 18px;
   }
 }
 
@@ -696,6 +698,7 @@ const resetFlow = () => {
 
   .submit-btn {
     width: 100%;
+    min-width: 0;
     justify-content: center;
   }
 
@@ -705,16 +708,25 @@ const resetFlow = () => {
   }
 
   .success-card {
-    padding: 18px 16px 16px;
+    padding: 16px 14px 14px;
   }
 
   .success-summary {
-    font-size: 0.76rem;
+    font-size: 0.74rem;
+  }
+
+  .success-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .success-actions .submit-btn {
+    width: 100%;
   }
 }
 </style>
 
-<!-- Estilos globales para blindar contra Elementor -->
+<!-- Estilos globales para blindar contra Elementor (incluye tamaños de botón más chicos) -->
 <style>
 /* Caja del simulador: fondo transparente */
 #solar-calculator .solar-app,
@@ -732,21 +744,22 @@ const resetFlow = () => {
   box-sizing: border-box;
 }
 
-/* BOTONES VUETIFY: tamaño, padding y texto consistente */
+/* BOTONES VUETIFY: tamaño y padding moderado */
 #solar-calculator .v-btn,
 #solar-calculator .v-btn:link,
 #solar-calculator .v-btn:visited {
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  padding: 10px 32px !important;
-  min-height: 44px !important;
+  padding: 8px 22px !important;
+  min-height: 38px !important;
   height: auto !important;
   border-radius: 999px !important;
   text-decoration: none !important;
   text-transform: none !important;
   letter-spacing: 0 !important;
   font-weight: 600 !important;
+  font-size: 0.9rem !important;
 }
 
 #solar-calculator .v-btn__content {
