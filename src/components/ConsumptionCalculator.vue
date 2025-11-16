@@ -4,8 +4,9 @@
     <div class="aux-header">
       <h3 class="aux-title">Calculá tu consumo y tu ahorro</h3>
       <p class="aux-subtitle">
-        Completá tus datos y el valor aproximado de tu factura de luz. Te mostramos
-        una estimación de consumo, tamaño de sistema solar y cuánto podrías ahorrar.
+        Completá tus datos y el valor aproximado de tu factura de luz. Te
+        mostramos una estimación de consumo, tamaño de sistema solar y cuánto
+        podrías ahorrar.
       </p>
     </div>
 
@@ -53,7 +54,8 @@
         <v-text-field
           v-model="form.currentBill"
           label="Factura promedio de luz (ARS)"
-          type="number"
+          type="text"
+          placeholder="Ej: 20.000"
           variant="outlined"
           density="comfortable"
           hide-details="auto"
@@ -118,10 +120,33 @@
           color="primary"
           variant="flat"
           :loading="isSubmitting"
-          :disabled="isSubmitting"
+          :disabled="isSubmitting || hasSubmitted"
           @click="handleSubmit"
         >
-          Ver mi ahorro y que me contacten
+          {{
+            hasSubmitted
+              ? 'Simulación registrada'
+              : 'Ver mi ahorro y que me contacten'
+          }}
+        </v-btn>
+
+        <v-btn
+          v-if="hasSubmitted"
+          variant="outlined"
+          class="secondary-btn"
+          color="primary"
+          @click="downloadReceipt"
+        >
+          Descargar comprobante de simulación
+        </v-btn>
+
+        <v-btn
+          v-if="hasSubmitted"
+          variant="text"
+          class="secondary-btn"
+          @click="resetCalcForm"
+        >
+          Nueva simulación
         </v-btn>
       </div>
     </v-form>
@@ -139,18 +164,29 @@ import {
   estimateYearlySavingsArs,
 } from '../service/solarMath'
 
+function parseMoney(value) {
+  if (value === null || value === undefined) return null
+  const cleaned = String(value).replace(/\./g, '').replace(/,/g, '').trim()
+  if (!cleaned) return null
+  const n = Number(cleaned)
+  return Number.isNaN(n) ? null : n
+}
+
 const formRef = ref(null)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const hasSubmitted = ref(false)
 
-const form = reactive({
+const createInitialForm = () => ({
   fullName: '',
   phone: '',
   email: '',
   usage: null,
   currentBill: null,
 })
+
+const form = reactive(createInitialForm())
 
 const usages = [
   { value: 'home', label: 'Mi casa', segment: 'Residencial' },
@@ -167,16 +203,20 @@ const usageMap = computed(() =>
 
 const rules = {
   required: v => !!v || 'Campo obligatorio',
-  requiredNumber: v =>
-    (v !== null && v !== '' && !isNaN(Number(v))) || 'Ingresá un valor numérico',
+  requiredNumber: v => {
+    const n = parseMoney(v)
+    return (n !== null && !Number.isNaN(n)) || 'Ingresá un valor numérico'
+  },
   email: v => !v || /.+@.+\..+/.test(v) || 'Email inválido',
 }
 
 /* CÁLCULOS EN VIVO */
 
+const billNumber = computed(() => parseMoney(form.currentBill))
+
 const monthlyKwh = computed(() => {
-  if (!form.currentBill) return null
-  return estimateMonthlyKwh(Number(form.currentBill))
+  if (!billNumber.value) return null
+  return estimateMonthlyKwh(billNumber.value)
 })
 
 const systemSizeKw = computed(() => {
@@ -195,14 +235,14 @@ const yearlyKwh = computed(() => {
 })
 
 const yearlySavings = computed(() => {
-  if (!form.currentBill) return null
-  return estimateYearlySavingsArs(Number(form.currentBill))
+  if (!billNumber.value) return null
+  return estimateYearlySavingsArs(billNumber.value)
 })
 
-// Ahorro mensual aproximado: tomamos el valor de la factura actual
+// Ahorro mensual aproximado = factura actual
 const monthlySavings = computed(() => {
-  if (!form.currentBill) return null
-  return Number(form.currentBill)
+  if (!billNumber.value) return null
+  return billNumber.value
 })
 
 const canShowResults = computed(() => {
@@ -221,7 +261,6 @@ const canShowResults = computed(() => {
 
 function buildLeadPayload() {
   const usage = usageMap.value[form.usage] || null
-  const billNumber = form.currentBill ? Number(form.currentBill) : null
 
   return {
     location: {
@@ -240,7 +279,7 @@ function buildLeadPayload() {
       segment: usage?.segment || null,
       propertyType: usage?.segment || null,
 
-      monthlyBillArs: billNumber,
+      monthlyBillArs: billNumber.value,
       estimatedMonthlyKwh: monthlyKwh.value || null,
       estimatedSystemSizeKw: systemSizeKw.value || null,
       priority: 'A evaluar',
@@ -277,6 +316,8 @@ function buildLeadPayload() {
 }
 
 const handleSubmit = async () => {
+  if (hasSubmitted.value) return
+
   errorMessage.value = ''
   successMessage.value = ''
 
@@ -309,7 +350,6 @@ const handleSubmit = async () => {
 
     console.log('[solar-calculator] Lead calculadora OK:', data)
 
-    // Evento para integraciones / analytics
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('solar-calculator:lead', {
@@ -319,7 +359,8 @@ const handleSubmit = async () => {
     }
 
     successMessage.value =
-      'Listo, registramos tu simulación. Un asesor de Grupo Alade te va a contactar con más detalles.';
+      'Listo, registramos tu simulación. Un asesor de Grupo Alade te va a contactar con más detalles.'
+    hasSubmitted.value = true
   } catch (err) {
     console.error('[solar-calculator] Error al enviar lead:', err)
     errorMessage.value =
@@ -327,6 +368,75 @@ const handleSubmit = async () => {
   } finally {
     isSubmitting.value = false
   }
+}
+
+/* DESCARGA DE COMPROBANTE */
+
+const downloadReceipt = () => {
+  if (!canShowResults.value) return
+
+  const lines = [
+    'Simulación solar - Grupo Alade',
+    '=================================',
+    '',
+    `Nombre: ${form.fullName}`,
+    `Teléfono: ${form.phone}`,
+    `Email: ${form.email}`,
+    `Uso: ${
+      usageMap.value[form.usage]?.label || 'Sin especificar'
+    }`,
+    '',
+    `Factura mensual informada: $${billNumber.value?.toLocaleString('es-AR')}`,
+    `Consumo estimado: ${
+      monthlyKwh.value
+        ? `${monthlyKwh.value.toLocaleString('es-AR')} kWh/mes`
+        : '—'
+    }`,
+    `Tamaño sugerido del sistema: ${
+      systemSizeKw.value ? `${systemSizeKw.value} kWp` : '—'
+    }`,
+    `Cantidad estimada de paneles: ${panels.value || '—'}`,
+    `Energía anual estimada: ${
+      yearlyKwh.value
+        ? `${yearlyKwh.value.toLocaleString('es-AR')} kWh/año`
+        : '—'
+    }`,
+    `Ahorro mensual estimado: ${
+      monthlySavings.value
+        ? `$${monthlySavings.value.toLocaleString('es-AR')}`
+        : '—'
+    }`,
+    `Ahorro anual estimado: ${
+      yearlySavings.value
+        ? `$${yearlySavings.value.toLocaleString('es-AR')}`
+        : '—'
+    }`,
+    '',
+    'Este comprobante es una estimación inicial. El diseño final del sistema',
+    'y la propuesta económica pueden variar según la evaluación técnica.',
+  ]
+
+  const blob = new Blob([lines.join('\n')], {
+    type: 'text/plain;charset=utf-8',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'simulacion-solar-grupo-alade.txt'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+/* RESET DEL FLUJO */
+
+const resetCalcForm = () => {
+  Object.assign(form, createInitialForm())
+  formRef.value?.resetValidation()
+  errorMessage.value = ''
+  successMessage.value = ''
+  hasSubmitted.value = false
 }
 </script>
 
@@ -435,7 +545,12 @@ const handleSubmit = async () => {
   text-transform: none;
 }
 
-/* Responsive */
+.secondary-btn {
+  text-transform: none;
+  font-size: 0.83rem;
+}
+
+/* Responsive: dos columnas en desktop */
 @media (min-width: 720px) {
   .calc-grid {
     display: grid;

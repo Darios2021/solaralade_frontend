@@ -9,6 +9,17 @@ import {
   estimateYearlySavingsArs,
 } from '../service/solarMath'
 
+/**
+ * Normaliza un importe tipo "20.000", "40,000", "50000" a número.
+ */
+function parseMoney(value) {
+  if (value === null || value === undefined) return null
+  const cleaned = String(value).replace(/\./g, '').replace(/,/g, '').trim()
+  if (!cleaned) return null
+  const n = Number(cleaned)
+  return Number.isNaN(n) ? null : n
+}
+
 export function useSolarLead() {
   console.log('[solar-calculator] useSolarLead inicializado')
 
@@ -19,6 +30,7 @@ export function useSolarLead() {
   const errorMessage = ref('')
   const showSuccess = ref(false)
   const lastLead = ref(null)
+  const hasSubmitted = ref(false) // evita envíos masivos
 
   const createInitialForm = () => ({
     city: '',
@@ -75,8 +87,10 @@ export function useSolarLead() {
   // VALIDACIONES
   const rules = {
     required: v => !!v || 'Campo obligatorio',
-    requiredNumber: v =>
-      (v !== null && v !== '' && !isNaN(Number(v))) || 'Ingresá un valor numérico',
+    requiredNumber: v => {
+      const n = parseMoney(v)
+      return (n !== null && !Number.isNaN(n)) || 'Ingresá un valor numérico'
+    },
     email: v => !v || /.+@.+\..+/.test(v) || 'Email inválido',
   }
 
@@ -100,8 +114,8 @@ export function useSolarLead() {
   }
 
   // PRIORIDAD / CRM
-  function estimatePriority(purposeValue, monthlyBill) {
-    const bill = Number(monthlyBill) || 0
+  function estimatePriority(purposeValue, monthlyBillRaw) {
+    const bill = parseMoney(monthlyBillRaw) || 0
     const driver = purposeMap.value[purposeValue]?.driver
 
     if (bill > 60000 || driver === 'mixto') return 'Muy alta'
@@ -152,7 +166,7 @@ export function useSolarLead() {
     const purpose = purposeMap.value[form.purpose] || null
     const usage = usageMap.value[form.usage] || null
 
-    const monthlyBillNumber = form.currentBill ? Number(form.currentBill) : null
+    const monthlyBillNumber = parseMoney(form.currentBill)
 
     const monthlyKwh = estimateMonthlyKwh(monthlyBillNumber)
     const systemSizeKw = estimateSystemSizeKw(monthlyKwh)
@@ -220,6 +234,11 @@ export function useSolarLead() {
 
   // ENVÍO
   const handleSubmit = async () => {
+    if (hasSubmitted.value) {
+      // ya se envió esta simulación, esperamos a que el usuario reinicie
+      return
+    }
+
     errorMessage.value = ''
 
     if (!formRef.value) return
@@ -229,7 +248,7 @@ export function useSolarLead() {
     const payload = buildLeadPayload()
     isSubmitting.value = true
 
-    console.log('[solar-calculator] Enviando lead', payload)
+    console.log('[solar-calculator] Enviando lead simulador:', payload)
 
     try {
       const data = await postLead(payload)
@@ -253,6 +272,7 @@ export function useSolarLead() {
 
       lastLead.value = data.lead || payload
       showSuccess.value = true
+      hasSubmitted.value = true
     } catch (err) {
       console.error('[solar-calculator] Error al enviar lead:', err)
       errorMessage.value =
@@ -262,7 +282,7 @@ export function useSolarLead() {
     }
   }
 
-  // RESÚMENES
+  // RESÚMENES PARA MODAL
   const summaryLocation = computed(() => {
     const province = provinces.find(p => p.value === form.province)
     const country = countries.find(c => c.value === form.country)
@@ -279,12 +299,16 @@ export function useSolarLead() {
   })
 
   const summaryBill = computed(() => {
-    if (!form.currentBill) return 'Sin dato'
-    const n = Number(form.currentBill)
+    const n = parseMoney(form.currentBill)
+    if (!n) return 'Sin dato'
     return `Aprox. $${n.toLocaleString('es-AR')} / mes`
   })
 
-  const previewKwh = computed(() => estimateMonthlyKwh(form.currentBill))
+  const previewKwh = computed(() => {
+    const n = parseMoney(form.currentBill)
+    return estimateMonthlyKwh(n)
+  })
+
   const previewSystemSize = computed(() =>
     estimateSystemSizeKw(previewKwh.value),
   )
@@ -296,7 +320,7 @@ export function useSolarLead() {
     return `${previewSystemSize.value} kWp (≈ ${previewKwh.value} kWh/mes)`
   })
 
-  // RESET / CIERRE
+  // RESET / MODAL
   const closeOnly = () => {
     showSuccess.value = false
   }
@@ -307,22 +331,23 @@ export function useSolarLead() {
     step.value = 1
     errorMessage.value = ''
     lastLead.value = null
+    hasSubmitted.value = false
     formRef.value?.resetValidation()
   }
 
-  // 🔗 INTEGRACIÓN CON LA CALCULADORA (evento solar-calculator:use-bill)
+  // Integración con calculadora (si se usa)
   let removeListener = null
 
   onMounted(() => {
     if (typeof window === 'undefined') return
 
     const handler = evt => {
-      const bill = evt.detail
-      console.log('[solar-calculator] Recibido use-bill:', bill)
+      const billRaw = evt.detail
+      console.log('[solar-calculator] Recibido use-bill:', billRaw)
 
-      if (bill != null && !Number.isNaN(Number(bill))) {
-        form.currentBill = Number(bill)
-        // nos aseguramos de estar al menos en el paso 3 (uso + factura)
+      const n = parseMoney(billRaw)
+      if (n !== null) {
+        form.currentBill = billRaw
         if (step.value < 3) step.value = 3
       }
     }
@@ -359,5 +384,6 @@ export function useSolarLead() {
     handleSubmit,
     resetFlow,
     closeOnly,
+    hasSubmitted,
   }
 }

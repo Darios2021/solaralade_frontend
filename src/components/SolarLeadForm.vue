@@ -79,7 +79,8 @@
         <v-text-field
           v-model="form.currentBill"
           label="¿Cuánto pagás aprox. de luz al mes? (ARS)"
-          type="number"
+          type="text"
+          placeholder="Ej: 20.000"
           variant="outlined"
           density="comfortable"
           hide-details="auto"
@@ -136,10 +137,16 @@
           color="primary"
           variant="flat"
           :loading="isSubmitting"
-          :disabled="isSubmitting"
+          :disabled="isSubmitting || hasSubmitted"
           @click="step < totalSteps ? goNext() : handleSubmit()"
         >
-          {{ step < totalSteps ? 'Siguiente' : 'Solicitar cotización' }}
+          {{
+            hasSubmitted
+              ? 'Solicitud enviada'
+              : step < totalSteps
+              ? 'Siguiente'
+              : 'Solicitar cotización'
+          }}
         </v-btn>
       </div>
 
@@ -208,23 +215,6 @@
           </v-btn>
 
           <v-btn
-            class="success-btn success-btn--secondary"
-            variant="outlined"
-            color="primary"
-            @click="handleOpenCalc"
-          >
-            Realizar cálculo de consumo
-          </v-btn>
-
-          <v-btn
-            class="success-btn success-btn--ghost"
-            variant="text"
-            @click="handleOpenSolarGreen"
-          >
-            Ir a Solar Green Alade
-          </v-btn>
-
-          <v-btn
             class="success-btn success-btn--ghost"
             variant="text"
             @click="closeOnly"
@@ -243,7 +233,6 @@ import { useSolarLead } from '../composables/useSolarLead'
 
 const emit = defineEmits(['open-calc', 'open-solar-green'])
 
-// Composable con toda la lógica del lead
 const {
   step,
   totalSteps,
@@ -267,37 +256,13 @@ const {
   handleSubmit,
   resetFlow,
   closeOnly,
+  hasSubmitted,
 } = useSolarLead()
 
 const handleReset = () => {
   resetFlow()
 }
 
-const handleOpenCalc = () => {
-  showSuccess.value = false
-  emit('open-calc')
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('solar-calculator:open-consumption-calc', {
-        detail: lastLead.value || null,
-      }),
-    )
-  }
-}
-
-const handleOpenSolarGreen = () => {
-  showSuccess.value = false
-  emit('open-solar-green')
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('solar-calculator:open-solar-green', {
-        detail: lastLead.value || null,
-      }),
-    )
-  }
-}
 </script>
 
 <style scoped>
@@ -346,7 +311,6 @@ const handleOpenSolarGreen = () => {
   text-transform: none;
 }
 
-/* BOTÓN principal */
 .submit-btn {
   min-width: 140px;
   font-weight: 600;
@@ -445,7 +409,6 @@ const handleOpenSolarGreen = () => {
   text-align: center;
 }
 
-/* Acciones modal */
 .success-actions {
   display: flex;
   flex-direction: column;
@@ -464,34 +427,7 @@ const handleOpenSolarGreen = () => {
   border-radius: 999px !important;
 }
 
-.success-btn--secondary {
-  background-color: #ffffff !important;
-}
-
 .success-btn--ghost {
   font-weight: 500 !important;
-}
-
-/* MOBILE */
-@media (max-width: 600px) {
-  .form-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-  .submit-btn {
-    width: 100%;
-    min-width: 0;
-  }
-  .back-btn {
-    align-self: flex-start;
-    padding-left: 0;
-  }
-  .success-card {
-    padding: 16px 14px 14px;
-  }
-  .success-summary {
-    font-size: 0.74rem;
-  }
 }
 </style>
