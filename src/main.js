@@ -6,7 +6,6 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
-// Vuetify config
 const vuetify = createVuetify({
   components,
   directives,
@@ -27,7 +26,6 @@ const vuetify = createVuetify({
   },
 })
 
-// Función para montar la app del calculador
 function mount(targetId = 'solar-calculator') {
   const el = document.getElementById(targetId)
 
@@ -36,17 +34,25 @@ function mount(targetId = 'solar-calculator') {
     return
   }
 
+  // Anti doble montaje
+  if (el.dataset.scMounted === '1') {
+    console.log('[solar-calculator] Ya estaba montado en', targetId)
+    return
+  }
+
   const app = createApp(App)
   app.use(vuetify)
   app.mount(el)
 
+  el.dataset.scMounted = '1'
+
   return app
 }
 
-// Exponer API global para Elementor / HTML externo
+// API global que usa tu snippet de Elementor
 window.SolarCalculator = { mount }
 
-// Montaje automático si existe el contenedor en el DOM
+// Montaje automático si el div ya existe
 if (document.getElementById('solar-calculator')) {
   mount()
 }
