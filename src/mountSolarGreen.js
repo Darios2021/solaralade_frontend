@@ -8,7 +8,7 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
-// Podés usar un theme simple o el mismo que la calculadora
+// Theme ALADE Green
 const vuetify = createVuetify({
   components,
   directives,
@@ -18,9 +18,9 @@ const vuetify = createVuetify({
       greenLight: {
         dark: false,
         colors: {
-          primary: '#2a7c41',
-          secondary: '#1a5934',
-          background: '#ffffff',
+          primary: '#1a5634',      // 💚 verde principal
+          secondary: '#0f3a23',
+          background: '#f5f5f5',
           surface: '#ffffff',
           'on-primary': '#ffffff',
         },

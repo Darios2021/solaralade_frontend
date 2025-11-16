@@ -4,16 +4,16 @@
       <!-- HERO -->
       <section class="bg-white">
         <v-container class="py-12 py-md-16 text-center">
-          <div class="text-h4 text-md-h3 font-weight-bold text-green-darken-2 mb-3">
+          <div class="text-h4 text-md-h3 font-weight-bold hero-title mb-3">
             Bienvenido a ALADE Green
           </div>
           <div
-            class="text-subtitle-1 text-medium-emphasis mb-8 mx-auto"
-            style="max-width: 640px;"
+            class="text-subtitle-1 text-medium-emphasis mb-8 mx-auto hero-subtitle"
           >
-            La energía solar para hogares y comercios con la calidad de Grupo Alade.
-            Conocé cómo funciona un sistema de paneles solares, estimá tu ahorro
-            y dejá tus datos para que un asesor te acompañe en todo el proceso.
+            La energía solar para hogares y comercios con la calidad de Grupo
+            Alade. Conocé cómo funciona un sistema de paneles solares, estimá tu
+            ahorro y dejá tus datos para que un asesor te acompañe en todo el
+            proceso.
           </div>
 
           <v-btn
@@ -30,47 +30,49 @@
       <!-- BENEFICIOS PRINCIPALES -->
       <section>
         <v-container class="py-10">
-          <div class="text-h5 text-md-h4 font-weight-medium text-center mb-6">
+          <div class="section-title text-center mb-6">
             ¿Por qué instalar un sistema de paneles solares?
           </div>
 
           <v-row dense align="stretch">
             <v-col cols="12" md="4">
-              <v-card class="h-100" elevation="2">
+              <v-card class="h-100 benefit-card" elevation="2">
                 <v-card-text class="py-6">
-                  <div class="text-h6 mb-2 text-green-darken-2">
+                  <div class="benefit-title">
                     Ahorro económico
                   </div>
                   <div class="text-body-2 text-medium-emphasis">
                     Un sistema fotovoltaico genera parte de la energía que
                     consumís todos los meses. Eso se traduce en menor
-                    dependencia de la red y una reducción progresiva de
-                    la factura eléctrica.
+                    dependencia de la red y una reducción progresiva de la
+                    factura eléctrica.
                   </div>
                 </v-card-text>
               </v-card>
             </v-col>
 
             <v-col cols="12" md="4">
-              <v-card class="h-100" elevation="2">
+              <v-card class="h-100 benefit-card" elevation="2">
                 <v-card-text class="py-6">
-                  <div class="text-h6 mb-2 text-green-darken-2">
+                  <div class="benefit-title">
                     Sustentabilidad
                   </div>
                   <div class="text-body-2 text-medium-emphasis">
-                    La energía solar es renovable y limpia. Al generar parte
-                    de tu consumo a partir del sol, reducís tu huella de carbono
-                    y contribuís a un modelo energético más responsable.
+                    La energía solar es renovable y limpia. Al generar parte de
+                    tu consumo a partir del sol, reducís tu huella de carbono y
+                    contribuís a un modelo energético más responsable.
                   </div>
                 </v-card-text>
               </v-card>
             </v-col>
 
             <v-col cols="12" md="4">
-              <v-card class="h-100" elevation="2">
+              <v-card class="h-100 benefit-card" elevation="2">
                 <v-card-text class="py-6">
-                  Confort y previsibilidad
-                  <div class="text-body-2 text-medium-emphasis mt-2">
+                  <div class="benefit-title">
+                    Confort y previsibilidad
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis">
                     Un sistema bien dimensionado te da previsibilidad de costos
                     a mediano y largo plazo, y puede integrarse con soluciones
                     de respaldo frente a cortes de energía.
@@ -85,19 +87,18 @@
       <!-- SECCIÓN CALCULADORA + FORMULARIO -->
       <section id="green-calculator-section" class="bg-grey-lighten-4">
         <v-container class="py-10 d-flex justify-center">
-          <!-- wrapper con el mismo estilo que App.vue -->
           <div id="solar-calculator" class="form-wrapper">
             <v-card class="form-card" elevation="8">
-              <!-- HEADER -->
               <div class="form-header">
                 <span class="form-chip">Simulador inicial</span>
-                <h2 class="form-title">Cotizá tu instalación solar</h2>
+                <h2 class="form-title">
+                  Cotizá tu instalación solar
+                </h2>
                 <p class="form-subtitle">
-                  Completá unos datos y te ayudamos a estimar el sistema de paneles
-                  adecuado para tu hogar o comercio.
+                  Completá unos datos y te ayudamos a estimar el sistema de
+                  paneles adecuado para tu hogar o comercio.
                 </p>
 
-                <!-- NAV DE VISTAS -->
                 <div class="view-tabs">
                   <button
                     type="button"
@@ -119,13 +120,9 @@
                 </div>
               </div>
 
-              <!-- VISTA FORMULARIO -->
               <SolarLeadForm v-show="activeView === 'form'" />
-
-              <!-- VISTA CALCULADORA DE CONSUMO -->
               <ConsumptionCalculator v-show="activeView === 'calc'" />
 
-              <!-- BOTÓN MÁS INFORMACIÓN (scroll a sección de info) -->
               <div class="more-info-wrap">
                 <v-btn
                   variant="text"
@@ -143,13 +140,13 @@
       <!-- CÓMO FUNCIONA UN SISTEMA SOLAR -->
       <section ref="infoSection" class="bg-white">
         <v-container class="py-10">
-          <div class="text-h5 text-md-h4 font-weight-medium text-center mb-8">
+          <div class="section-title text-center mb-8">
             ¿Cómo funciona un sistema de paneles solares?
           </div>
 
           <v-row>
             <v-col cols="12" md="4">
-              <h3 class="text-subtitle-1 font-weight-medium mb-2">
+              <h3 class="step-title">
                 1. Captación de energía
               </h3>
               <p class="text-body-2 text-medium-emphasis">
@@ -160,7 +157,7 @@
             </v-col>
 
             <v-col cols="12" md="4">
-              <h3 class="text-subtitle-1 font-weight-medium mb-2">
+              <h3 class="step-title">
                 2. Conversión e integración
               </h3>
               <p class="text-body-2 text-medium-emphasis">
@@ -171,7 +168,7 @@
             </v-col>
 
             <v-col cols="12" md="4">
-              <h3 class="text-subtitle-1 font-weight-medium mb-2">
+              <h3 class="step-title">
                 3. Uso y monitoreo
               </h3>
               <p class="text-body-2 text-medium-emphasis">
@@ -188,19 +185,22 @@
       <!-- PREGUNTAS FRECUENTES -->
       <section>
         <v-container class="py-10">
-          <div class="text-h5 text-md-h4 font-weight-medium text-center mb-6">
+          <div class="section-title text-center mb-6">
             Preguntas frecuentes
           </div>
 
-          <v-expansion-panels variant="accordion">
+          <v-expansion-panels
+            variant="accordion"
+            class="faq-panels"
+          >
             <v-expansion-panel>
               <v-expansion-panel-title>
                 ¿Tengo que cambiar toda mi instalación eléctrica?
               </v-expansion-panel-title>
               <v-expansion-panel-text class="text-body-2 text-medium-emphasis">
                 No. El sistema se integra a tu tablero actual. Sólo se hacen
-                adecuaciones puntuales para garantizar seguridad y funcionamiento
-                óptimo según la normativa vigente.
+                adecuaciones puntuales para garantizar seguridad y
+                funcionamiento óptimo según la normativa vigente.
               </v-expansion-panel-text>
             </v-expansion-panel>
 
@@ -209,9 +209,10 @@
                 ¿Qué pasa cuando está nublado o es de noche?
               </v-expansion-panel-title>
               <v-expansion-panel-text class="text-body-2 text-medium-emphasis">
-                La generación baja cuando hay poca radiación, y es nula de noche.
-                Por eso el sistema trabaja en conjunto con la red eléctrica
-                convencional y, si lo deseás, con baterías de respaldo.
+                La generación baja cuando hay poca radiación, y es nula de
+                noche. Por eso el sistema trabaja en conjunto con la red
+                eléctrica convencional y, si lo deseás, con baterías de
+                respaldo.
               </v-expansion-panel-text>
             </v-expansion-panel>
 
@@ -230,21 +231,20 @@
       </section>
 
       <!-- CTA FINAL -->
-      <section class="bg-green-darken-1">
+      <section class="green-cta-section">
         <v-container class="py-10 text-center">
-          <div class="text-h5 text-md-h4 font-weight-medium mb-2 text-white">
+          <div class="cta-title mb-2">
             Empezá hoy tu proyecto solar
           </div>
-          <div class="text-body-2 text-md-body-1 mb-6 text-white text-medium-emphasis">
+          <div class="cta-subtitle mb-6">
             Usá el simulador para tener una primera referencia y dejá tus datos
             para recibir una propuesta adaptada a tu realidad.
           </div>
 
           <v-btn
-            color="white"
             variant="outlined"
             size="large"
-            class="px-8 py-3 text-button"
+            class="px-8 py-3 text-button cta-button"
             @click="scrollToCalculator"
           >
             IR AL SIMULADOR
@@ -265,24 +265,47 @@ const infoSection = ref(null)
 
 function scrollToCalculator() {
   const el = document.getElementById('green-calculator-section')
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth' })
-  }
+  if (el) el.scrollIntoView({ behavior: 'smooth' })
 }
 
 function scrollToInfo() {
-  const el = infoSection.value
-  if (el?.$el) {
-    el.$el.scrollIntoView({ behavior: 'smooth' })
-  } else {
-    const dom = document.querySelector('[ref="infoSection"]')
-    if (dom) dom.scrollIntoView({ behavior: 'smooth' })
-  }
+  const dom =
+    infoSection.value?.$el || document.querySelector('[ref="infoSection"]')
+  if (dom) dom.scrollIntoView({ behavior: 'smooth' })
 }
 </script>
 
 <style scoped>
-/* Wrapper del simulador (copiado de App.vue para mantener estética) */
+.solar-green-app {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+}
+
+/* títulos secciones */
+.section-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.hero-title {
+  color: #1a5634;
+}
+
+.hero-subtitle {
+  max-width: 640px;
+}
+
+/* tarjetas beneficios */
+.benefit-card {
+  border-radius: 14px;
+}
+
+.benefit-title {
+  color: #1a5634;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* wrapper simulador */
 .form-wrapper {
   width: 100%;
   display: flex;
@@ -296,7 +319,7 @@ function scrollToInfo() {
   border-radius: 18px;
   padding: 24px 22px 20px;
   background: #ffffff;
-  border: 1px solid rgba(42, 124, 65, 0.18);
+  border: 1px solid rgba(26, 86, 52, 0.18);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
 }
 
@@ -311,7 +334,7 @@ function scrollToInfo() {
   font-size: 0.7rem;
   font-weight: 600;
   color: #ffffff;
-  background-color: #1a5934;
+  background-color: #1a5634;
   margin-bottom: 6px;
 }
 
@@ -327,7 +350,7 @@ function scrollToInfo() {
   margin: 0;
 }
 
-/* Tabs de vista */
+/* tabs */
 .view-tabs {
   margin-top: 12px;
   display: flex;
@@ -351,11 +374,11 @@ function scrollToInfo() {
 }
 
 .view-tab.active {
-  background: #2a7c41;
+  background: #1a5634;
   color: #ffffff;
 }
 
-/* Footer */
+/* link info extra */
 .more-info-wrap {
   margin-top: 16px;
   text-align: center;
@@ -367,9 +390,70 @@ function scrollToInfo() {
   font-size: 0.82rem !important;
 }
 
-/* Ajustes generales dentro del contenedor */
-#solar-calculator .v-field,
-#solar-calculator .v-btn {
+/* pasos */
+.step-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a5634;
+  margin-bottom: 6px;
+}
+
+/* FAQ panels: arreglar verde roto */
+.faq-panels {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+:deep(.faq-panels .v-expansion-panel) {
+  background-color: #ffffff !important;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:deep(.faq-panels .v-expansion-panel-title) {
+  color: #1a5634;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+:deep(.faq-panels .v-expansion-panel-title__overlay) {
+  background-color: transparent !important;
+}
+
+:deep(.faq-panels .v-expansion-panel--active .v-expansion-panel-title) {
+  color: #ffffff;
+  background-color: #1a5634;
+  border-radius: 12px 12px 0 0;
+}
+
+/* CTA final */
+.green-cta-section {
+  background-color: #1a5634;
+  color: #ffffff;
+}
+
+.cta-title {
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+
+.cta-subtitle {
+  max-width: 520px;
+  margin: 0 auto;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+.cta-button {
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+/* evitar sombras raras en componentes dentro del simulador */
+#solar-calculator :deep(.v-field),
+#solar-calculator :deep(.v-btn) {
   box-shadow: none !important;
 }
 </style>
