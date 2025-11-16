@@ -387,25 +387,33 @@ const downloadReceiptPdf = () => {
   const doc = new jsPDF()
   let y = 18
 
-  // TÍTULO
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.setTextColor(brandR, brandG, brandB)
-  doc.text('Simulación solar - Grupo Alade', 14, y)
-  y += 7
+// TÍTULO
+doc.setFont('helvetica', 'bold')
+doc.setFontSize(18)
+doc.setTextColor(brandR, brandG, brandB)
+doc.text('Simulación solar - Grupo Alade', 14, y)
+y += 7
 
-  // Marca / URL bajo el título
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(mutedR, mutedG, mutedB)
-  doc.text('Grupo Alade · www.grupoalade.com.ar', 14, y)
-  y += 8
+// Marca / URL clickeable bajo el título
+doc.setFontSize(10)
+doc.setFont('helvetica', 'normal')
+doc.setTextColor(mutedR, mutedG, mutedB)
 
-  // Fecha
-  doc.setTextColor(textR, textG, textB)
-  doc.setFontSize(10)
-  doc.text('Generado el ' + nowStr, 14, y)
-  y += 10
+doc.textWithLink(
+  'Grupo Alade · https://grupoalade.com/',
+  14,
+  y,
+  { url: 'https://grupoalade.com/' }
+)
+
+y += 8
+
+// Fecha
+doc.setTextColor(textR, textG, textB)
+doc.setFontSize(10)
+doc.text('Generado el ' + nowStr, 14, y)
+y += 10
+
 
   // DATOS DE CONTACTO
   doc.setFont('helvetica', 'bold')
