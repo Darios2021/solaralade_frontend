@@ -370,9 +370,8 @@ const handleSubmit = async () => {
   }
 }
 
-/* ============================================
-   DESCARGAR PDF REAL (jsPDF) + MARCA DE PÁGINA
-============================================ */
+//* =============PFD==========================
+
 const downloadReceiptPdf = () => {
   if (!canShowResults.value) return
 
@@ -380,45 +379,66 @@ const downloadReceiptPdf = () => {
   const usoLabel = usoObj ? usoObj.label : 'Sin especificar'
   const nowStr = new Date().toLocaleString('es-AR')
 
+  // Colores de marca
+  const brandR = 42, brandG = 124, brandB = 65      // Verde Alade
+  const textR = 40, textG = 40, textB = 40          // Texto principal
+  const mutedR = 120, mutedG = 120, mutedB = 120    // Nota al pie / marca
+
   const doc = new jsPDF()
   let y = 18
 
+  // TÍTULO
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(16)
+  doc.setFontSize(18)
+  doc.setTextColor(brandR, brandG, brandB)
   doc.text('Simulación solar - Grupo Alade', 14, y)
+  y += 7
+
+  // Marca / URL bajo el título
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(mutedR, mutedG, mutedB)
+  doc.text('Grupo Alade · www.grupoalade.com.ar', 14, y)
   y += 8
 
-  doc.setFont('helvetica', 'normal')
+  // Fecha
+  doc.setTextColor(textR, textG, textB)
   doc.setFontSize(10)
   doc.text('Generado el ' + nowStr, 14, y)
   y += 10
 
-  // Datos contacto
+  // DATOS DE CONTACTO
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
+  doc.setTextColor(brandR, brandG, brandB)
   doc.text('Datos de contacto', 14, y)
   y += 7
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
+  doc.setTextColor(textR, textG, textB)
   doc.text('Nombre: ' + (form.fullName || '—'), 14, y); y += 5
   doc.text('Teléfono: ' + (form.phone || '—'), 14, y); y += 5
   doc.text('Email: ' + (form.email || '—'), 14, y); y += 5
   doc.text('Uso declarado: ' + usoLabel, 14, y); y += 10
 
-  // Datos consumo
+  // DATOS DE CONSUMO
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
+  doc.setTextColor(brandR, brandG, brandB)
   doc.text('Datos de consumo', 14, y)
   y += 7
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
+  doc.setTextColor(textR, textG, textB)
+
   doc.text(
     'Factura: $' + billNumber.value.toLocaleString('es-AR'),
     14,
     y,
   ); y += 5
+
   doc.text(
     'Consumo estimado: ' +
       monthlyKwh.value.toLocaleString('es-AR') +
@@ -432,6 +452,7 @@ const downloadReceiptPdf = () => {
     : systemSizeKw.value + ' kWp'
 
   doc.text('Tamaño del sistema: ' + panelTxt, 14, y); y += 5
+
   doc.text(
     'Energía anual: ' +
       yearlyKwh.value.toLocaleString('es-AR') +
@@ -439,12 +460,14 @@ const downloadReceiptPdf = () => {
     14,
     y,
   ); y += 5
+
   doc.text(
     'Ahorro mensual: $' +
       monthlySavings.value.toLocaleString('es-AR'),
     14,
     y,
   ); y += 5
+
   doc.text(
     'Ahorro anual: $' +
       yearlySavings.value.toLocaleString('es-AR'),
@@ -452,20 +475,19 @@ const downloadReceiptPdf = () => {
     y,
   ); y += 12
 
+  // NOTA AL PIE
   const foot =
-    'Este comprobante es una estimación inicial. El diseño definitivo y la propuesta económica pueden variar según evaluación técnica del lugar.'
+    'Este comprobante es una estimación inicial. El diseño definitivo y la propuesta económica pueden variar según la evaluación técnica del lugar.'
 
   const lines = doc.splitTextToSize(foot, 180)
   doc.setFontSize(9)
+  doc.setTextColor(mutedR, mutedG, mutedB)
   doc.text(lines, 14, y)
 
-  // Marca de página (branding)
-  doc.setFontSize(8)
-  doc.setTextColor(120, 120, 120)
-  doc.text('Grupo Alade · www.grupoalade.com.ar', 14, 290)
-
+  // Descarga directa
   doc.save('simulacion-solar-grupo-alade.pdf')
 }
+
 
 /* ============================================
    RESET FLUJO
