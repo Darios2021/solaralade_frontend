@@ -5,8 +5,8 @@
 
   "scripts": {
     "dev": "vite",
-    "build:calculator": "vite build --mode calculator",
-    "build:green": "vite build --mode green",
+    "build:calculator": "node node_modules/vite/bin/vite.js build --mode calculator",
+    "build:green": "node node_modules/vite/bin/vite.js build --mode green",
     "build": "npm run build:calculator && npm run build:green",
     "preview": "vite preview"
   },

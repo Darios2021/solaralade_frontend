@@ -1,27 +1,31 @@
-### STAGE 1 - BUILD (NO ALPINE)
+# ---------------------------
+# Build stage
+# ---------------------------
 FROM node:20 AS build
+
 WORKDIR /app
 
-# Copiamos package.json y package-lock.json
-COPY package*.json ./
+# Rompemos cache fácilmente cambiando este número si hace falta
+ARG CACHE_BUST=1
 
-# Instalamos dependencias
+COPY package*.json ./
 RUN npm install
 
-# Copiamos todo el proyecto
 COPY . .
 
-# Compilamos AMBAS builds
-RUN npm run build:calculator && npm run build:green
+RUN npm run build
 
-### STAGE 2 - NGINX
-FROM nginx:alpine
+# ---------------------------
+# Serve stage
+# ---------------------------
+FROM node:20
 
-# Copiamos los archivos build
-COPY --from=build /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Config NGINX
-COPY default.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist ./dist
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+RUN npm install -g serve
+
+EXPOSE 3000
+
+CMD ["serve", "-s", "dist", "-l", "3000"]
