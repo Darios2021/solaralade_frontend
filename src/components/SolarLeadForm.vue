@@ -434,4 +434,44 @@ const handleReset = () => {
 .success-btn--ghost {
   font-weight: 500 !important;
 }
+
+
+/* ============================================
+   FIX SELECT — eliminar líneas fantasma en Vuetify
+============================================ */
+
+/* Quita la línea interna superior que deja el theme */
+:deep(.v-select .v-field__input),
+:deep(.v-select .v-field__input *),
+:deep(.v-select .v-field__overlay),
+:deep(.v-select .v-field__outline) {
+  box-shadow: none !important;
+  border-top: none !important;
+  background: transparent !important;
+}
+
+/* Elimina pseudo-elementos externos */
+:deep(.v-select .v-field__outline::before),
+:deep(.v-select .v-field__outline::after),
+:deep(.v-select .v-field__input::before),
+:deep(.v-select .v-field__input::after) {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Mantiene el borde rojo correcto de Vuetify */
+:deep(.v-input--error .v-field__outline) {
+  border-color: #c62828 !important;
+  border-width: 2px !important;
+}
+
+/* Evita que Elementor agregue bordes extra */
+:deep(.v-select),
+:deep(.v-select *) {
+  outline: none !important;
+  background-image: none !important;
+  border-image: none !important;
+}
+
 </style>
