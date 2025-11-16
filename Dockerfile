@@ -1,22 +1,27 @@
-# Etapa de build
-FROM node:20-alpine AS build
+### STAGE 1 - BUILD (NO ALPINE)
+FROM node:20 AS build
 WORKDIR /app
 
+# Copiamos package.json y package-lock.json
 COPY package*.json ./
+
+# Instalamos dependencias
 RUN npm install
 
+# Copiamos todo el proyecto
 COPY . .
-RUN npm run build
 
-# Etapa de servir estático
+# Compilamos AMBAS builds
+RUN npm run build:calculator && npm run build:green
+
+### STAGE 2 - NGINX
 FROM nginx:alpine
 
-# Usamos nuestro default.conf minimalista
-COPY default.conf /etc/nginx/conf.d/default.conf
-
-# Archivos estáticos compilados de Vite
+# Copiamos los archivos build
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+# Config NGINX
+COPY default.conf /etc/nginx/conf.d/default.conf
 
+EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
