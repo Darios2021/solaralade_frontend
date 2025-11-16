@@ -5,9 +5,7 @@ import vuetify from 'vite-plugin-vuetify'
 export default defineConfig({
   plugins: [
     vue(),
-    vuetify({
-      autoImport: true,
-    }),
+    vuetify({ autoImport: true })
   ],
 
   build: {
@@ -15,24 +13,23 @@ export default defineConfig({
 
     rollupOptions: {
       input: {
-        // ⚡ App principal (lead form + calculadora)
         calculator: 'src/main.js',
-
-        // ⚡ Nueva Landing Alade Green
-        solar_green: 'src/mountSolarGreen.js',
+        solarGreen: 'src/mountSolarGreen.js'
       },
 
       output: {
-        // Cada entrada produce su propio JS
+        format: 'iife',
+
         entryFileNames: (chunk) => {
           if (chunk.name === 'calculator') return 'solar-calculator.js'
-          if (chunk.name === 'solar_green') return 'solar-green.js'
+          if (chunk.name === 'solarGreen') return 'solar-green.js'
           return '[name].js'
         },
+
         assetFileNames: 'assets/[name].[ext]',
-      },
-    },
+      }
+    }
   },
 
-  base: '/',
+  base: '/'
 })
