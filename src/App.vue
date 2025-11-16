@@ -12,8 +12,12 @@
             </p>
           </div>
 
-          <!-- FORM -->
-          <v-form ref="formRef" class="form-body">
+          <!-- FORMULARIO / FLUJO PRINCIPAL -->
+          <v-form
+            v-if="!isCompleted"
+            ref="formRef"
+            class="form-body"
+          >
             <!-- Indicador de pasos -->
             <div class="step-indicator">
               <span
@@ -67,7 +71,7 @@
                 :items="purposes"
                 item-title="label"
                 item-value="value"
-                label="¿Para qué querés un sistema Solar fotovoltaico?"
+                label="¿Para qué querés un sistema solar fotovoltaico?"
                 variant="outlined"
                 density="comfortable"
                 hide-details="auto"
@@ -161,6 +165,59 @@
               {{ errorMessage }}
             </p>
           </v-form>
+
+          <!-- ESTADO DE ÉXITO / CONFIRMACIÓN -->
+          <div v-else class="success-body">
+            <div class="success-icon-wrap">
+              <v-icon size="40" class="success-icon">mdi-check-circle</v-icon>
+            </div>
+            <h3 class="success-title">
+              ¡Gracias{{ form.fullName ? `, ${form.fullName}` : '' }}!
+            </h3>
+            <p class="success-copy">
+              Recibimos tu solicitud de cotización. Un asesor de Grupo Alade se
+              va a contactar al
+              <strong>{{ form.phone || 'teléfono que nos indicaste' }}</strong>
+              <span v-if="form.email">
+                y al correo <strong>{{ form.email }}</strong>
+              </span>
+              en las próximas horas hábiles.
+            </p>
+
+            <div class="success-summary">
+              <div class="success-row">
+                <span class="success-label">Ubicación</span>
+                <span class="success-value">{{ summaryLocation }}</span>
+              </div>
+              <div class="success-row">
+                <span class="success-label">Uso del sistema</span>
+                <span class="success-value">{{ summaryUsage }}</span>
+              </div>
+              <div class="success-row">
+                <span class="success-label">Factura actual</span>
+                <span class="success-value">{{ summaryBill }}</span>
+              </div>
+              <div class="success-row">
+                <span class="success-label">Tamaño estimado del sistema</span>
+                <span class="success-value">
+                  {{ summarySystemSize }}
+                </span>
+              </div>
+            </div>
+
+            <p class="success-footnote">
+              Podés cerrar esta ventana, no necesitás hacer nada más.
+            </p>
+
+            <v-btn
+              class="submit-btn mt-4"
+              color="primary"
+              variant="flat"
+              @click="resetFlow"
+            >
+              Hacer otra simulación
+            </v-btn>
+          </div>
         </v-card>
       </div>
     </v-container>
@@ -176,9 +233,11 @@ const totalSteps = 4
 const formRef = ref(null)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+const isCompleted = ref(false)
+const lastLead = ref(null)
 
-// === DATOS DEL FORM ===
-const form = reactive({
+// === FORM HELPERS ===
+const createInitialForm = () => ({
   city: '',
   province: null,
   country: 'AR', // Argentina por defecto
@@ -189,6 +248,9 @@ const form = reactive({
   phone: '',
   email: '',
 })
+
+// === DATOS DEL FORM ===
+const form = reactive(createInitialForm())
 
 // Catálogos con códigos + labels
 const provinces = [
@@ -380,13 +442,8 @@ const handleSubmit = async () => {
       new CustomEvent('solar-calculator:lead', { detail: data.lead || payload })
     )
 
-    alert(
-      '¡Gracias! Recibimos tu solicitud de cotización. Un asesor de Grupo Alade se pondrá en contacto con vos.'
-    )
-
-    // Si querés, descomentá para resetear:
-    // formRef.value.reset()
-    // step.value = 1
+    lastLead.value = data.lead || payload
+    isCompleted.value = true
   } catch (err) {
     console.error('[solar-calculator] Error al enviar lead:', err)
     errorMessage.value =
@@ -394,6 +451,49 @@ const handleSubmit = async () => {
   } finally {
     isSubmitting.value = false
   }
+}
+
+// === RESUMEN PARA LA PANTALLA DE ÉXITO ===
+const summaryLocation = computed(() => {
+  const province = provinces.find(p => p.value === form.province)
+  const country = countries.find(c => c.value === form.country)
+  const parts = [form.city, province?.label, country?.label].filter(Boolean)
+  return parts.length ? parts.join(', ') : 'Sin datos'
+})
+
+const summaryUsage = computed(() => {
+  const usage = usageMap.value[form.usage]
+  const purpose = purposeMap.value[form.purpose]
+  if (!usage && !purpose) return 'Sin datos'
+  if (usage && purpose) {
+    return `${usage.label} · ${purpose.label}`
+  }
+  return (usage?.label || purpose?.label) ?? 'Sin datos'
+})
+
+const summaryBill = computed(() => {
+  if (!form.currentBill) return 'Sin dato'
+  const n = Number(form.currentBill)
+  return `Aprox. $${n.toLocaleString('es-AR')} / mes`
+})
+
+const previewKwh = computed(() => estimateMonthlyKwh(form.currentBill))
+const previewSystemSize = computed(() => estimateSystemSizeKw(previewKwh.value))
+
+const summarySystemSize = computed(() => {
+  if (!previewSystemSize.value || !previewKwh.value) return 'A estimar con más detalle'
+  return `${previewSystemSize.value} kWp (≈ ${previewKwh.value} kWh/mes)`
+})
+
+// === RESET DEL FLUJO ===
+const resetFlow = () => {
+  // Resetea el objeto reactivo manteniendo las keys
+  Object.assign(form, createInitialForm())
+  step.value = 1
+  isCompleted.value = false
+  errorMessage.value = ''
+  lastLead.value = null
+  formRef.value?.resetValidation()
 }
 </script>
 
@@ -492,10 +592,80 @@ const handleSubmit = async () => {
   color: #c62828;
 }
 
+/* ESTADO DE ÉXITO */
+.success-body {
+  text-align: center;
+  padding-top: 8px;
+}
+
+.success-icon-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.success-icon {
+  color: #2a7c41;
+}
+
+.success-title {
+  margin: 4px 0 6px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #1a5934;
+}
+
+.success-copy {
+  margin: 0 auto 14px;
+  font-size: 0.86rem;
+  color: #444;
+}
+
+.success-summary {
+  margin: 0 auto 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f5fbf7;
+  border: 1px solid rgba(42, 124, 65, 0.16);
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.success-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.success-row:last-child {
+  margin-bottom: 0;
+}
+
+.success-label {
+  font-weight: 600;
+  color: #1a5934;
+}
+
+.success-value {
+  text-align: right;
+  color: #333;
+}
+
+.success-footnote {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
 @media (max-width: 600px) {
   .form-card {
     max-width: 100%;
     padding-inline: 18px;
+  }
+
+  .success-summary {
+    font-size: 0.76rem;
   }
 }
 </style>
