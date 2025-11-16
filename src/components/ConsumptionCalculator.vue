@@ -511,6 +511,32 @@ const resetCalcForm = () => {
 
 <style scoped>
 /* ============================================
+   FIX DEFINITIVO — BORRAR LÍNEA FANTASMA EN SELECTS
+   (Elementor agrega bordes/backgrounds a inputs nativos)
+============================================ */
+:deep(input),
+:deep(select),
+:deep(textarea) {
+  border: none !important;
+  border-top: none !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Quitar pseudo-elementos molestos */
+:deep(.v-input::before),
+:deep(.v-input::after),
+:deep(.v-text-field::before),
+:deep(.v-text-field::after),
+:deep(.v-select::before),
+:deep(.v-select::after) {
+  border: none !important;
+  background: none !important;
+}
+
+/* ============================================
    CONTENEDOR GENERAL
 ============================================ */
 .calc-view {
@@ -557,7 +583,7 @@ const resetCalcForm = () => {
   gap: 12px;
 }
 
-/* Inputs más prolijos */
+/* Inputs Vuetify — limpiados completamente */
 :deep(.v-input),
 :deep(.v-text-field),
 :deep(.v-select) {
@@ -566,10 +592,11 @@ const resetCalcForm = () => {
   box-shadow: none !important;
 }
 
-/* Caja base del input */
+/* Caja visible */
 :deep(.v-field) {
   border-radius: 10px !important;
-  transition: border-color 0.2s ease;
+  border-width: 1px !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
 }
 
 /* Placeholder */
@@ -681,4 +708,5 @@ const resetCalcForm = () => {
   }
 }
 </style>
+
 
