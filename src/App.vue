@@ -665,13 +665,58 @@ const resetFlow = () => {
 }
 </style>
 
-<!-- Limpia el fondo blanco del v-app al estar embebido en Elementor -->
+<!-- Estilos globales para que Elementor no rompa nada -->
 <style>
-.solar-app,
-.solar-app .v-application__wrap,
-.solar-app .v-main,
-.solar-app .v-container {
+/* Fondo transparente del v-app dentro del contenedor del simulador */
+#solar-calculator .solar-app,
+#solar-calculator .solar-app .v-application__wrap,
+#solar-calculator .solar-app .v-main,
+#solar-calculator .solar-app .v-container {
   background: transparent !important;
+  box-shadow: none;
+}
+
+/* BOTONES VUETIFY: evitar subrayados/mayúsculas heredados */
+#solar-calculator .v-btn,
+#solar-calculator .v-btn:link,
+#solar-calculator .v-btn:visited {
+  text-decoration: none !important;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+#solar-calculator .v-btn__content {
+  text-decoration: none !important;
+  text-transform: none;
+}
+
+/* Por si Elementor toca cualquier <button> */
+#solar-calculator button {
+  text-decoration: none;
+  text-transform: none;
+}
+
+/* Inputs / selects Vuetify */
+#solar-calculator .v-field,
+#solar-calculator .v-input,
+#solar-calculator .v-text-field,
+#solar-calculator .v-select {
+  font-family: inherit;
+  text-transform: none;
+}
+
+/* Mensajes de error */
+#solar-calculator .v-messages__message {
+  font-size: 0.75rem;
+  text-transform: none;
+}
+
+/* Limpiar sombras/bordes globales */
+#solar-calculator button,
+#solar-calculator input,
+#solar-calculator select,
+#solar-calculator textarea {
   box-shadow: none;
 }
 </style>
