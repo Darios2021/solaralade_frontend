@@ -26,7 +26,17 @@ export default defineConfig(({ mode }) => {
 
       rollupOptions: {
         output: {
-          assetFileNames: 'assets/[name].[ext]',
+          // 👉 No más pisadas: style.css de cada modo con nombre propio
+          assetFileNames: (assetInfo) => {
+            // Sólo tocamos el CSS principal
+            if (assetInfo.name === 'style.css') {
+              return isGreen
+                ? 'assets/green.css'
+                : 'assets/calculator.css'
+            }
+            // Resto de assets igual
+            return 'assets/[name].[ext]'
+          },
         },
       },
     },
