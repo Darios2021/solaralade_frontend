@@ -511,8 +511,7 @@ const resetCalcForm = () => {
 
 <style scoped>
 /* ============================================
-   FIX DEFINITIVO — BORRAR LÍNEA FANTASMA EN SELECTS
-   (Elementor agrega bordes/backgrounds a inputs nativos)
+   FIX INPUTS / SELECTS vs WORDPRESS
 ============================================ */
 :deep(input),
 :deep(select),
@@ -525,7 +524,6 @@ const resetCalcForm = () => {
   outline: none !important;
 }
 
-/* Quitar pseudo-elementos molestos */
 :deep(.v-input::before),
 :deep(.v-input::after),
 :deep(.v-text-field::before),
@@ -558,7 +556,7 @@ const resetCalcForm = () => {
   font-size: 1.15rem !important;
   font-weight: 700 !important;
   line-height: 1.3 !important;
-  color: #1a5934 !important;
+  color: #1a5634 !important;
 }
 
 .aux-subtitle {
@@ -583,7 +581,7 @@ const resetCalcForm = () => {
   gap: 12px;
 }
 
-/* Inputs Vuetify — limpiados completamente */
+/* Inputs Vuetify */
 :deep(.v-input),
 :deep(.v-text-field),
 :deep(.v-select) {
@@ -592,7 +590,6 @@ const resetCalcForm = () => {
   box-shadow: none !important;
 }
 
-/* Caja visible */
 :deep(.v-field) {
   border-radius: 10px !important;
   border-width: 1px !important;
@@ -615,7 +612,7 @@ const resetCalcForm = () => {
   padding: 10px 12px;
   border-radius: 12px;
   background: #f5fbf7;
-  border: 1px solid rgba(42, 124, 65, 0.18);
+  border: 1px solid rgba(26, 86, 52, 0.25);
   font-size: 0.82rem;
 }
 
@@ -631,7 +628,7 @@ const resetCalcForm = () => {
 }
 
 .calc-label {
-  color: #1a5934;
+  color: #1a5634;
   font-weight: 600;
 }
 
@@ -645,7 +642,7 @@ const resetCalcForm = () => {
   padding: 10px 12px;
   border-radius: 10px;
   background: #fafcf9;
-  border: 1px dashed rgba(42, 124, 65, 0.35);
+  border: 1px dashed rgba(26, 86, 52, 0.45);
   font-size: 0.82rem;
   color: #555;
 }
@@ -662,11 +659,11 @@ const resetCalcForm = () => {
 .success-message {
   margin-top: 8px;
   font-size: 0.78rem;
-  color: #2a7c41;
+  color: #1a5634;
 }
 
 /* ============================================
-   ACCIONES
+   ACCIONES / BOTONES
 ============================================ */
 .aux-actions {
   margin-top: 6px;
@@ -675,17 +672,45 @@ const resetCalcForm = () => {
   gap: 8px;
 }
 
+/* Todos los botones dentro del bloque de acciones,
+   full-width en mobile para que se vean prolijos */
+.aux-actions :deep(.v-btn) {
+  width: 100%;
+}
+
+/* Botón principal */
 .submit-btn {
   font-weight: 600 !important;
   text-transform: none !important;
-  min-height: 36px !important;
+  min-height: 42px !important;
   border-radius: 999px !important;
+  background-color: #1a5634 !important;
+  color: #ffffff !important;
+  letter-spacing: 0.01em !important;
 }
 
+:deep(.submit-btn .v-btn__content) {
+  text-transform: none !important;
+}
+
+/* Botones secundarios (outlined / text) */
 .secondary-btn {
   text-transform: none !important;
   font-size: 0.82rem !important;
+  font-weight: 500 !important;
   border-radius: 999px !important;
+}
+
+/* outlined */
+.secondary-btn.v-btn--variant-outlined {
+  border-color: #1a5634 !important;
+  color: #1a5634 !important;
+}
+
+/* text */
+.secondary-btn.v-btn--variant-text {
+  color: #1a5634 !important;
+  border: none !important;
 }
 
 /* ============================================
@@ -706,9 +731,18 @@ const resetCalcForm = () => {
   .aux-title {
     font-size: 1.25rem !important;
   }
+
+  .aux-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .aux-actions :deep(.v-btn) {
+    width: auto;
+  }
 }
-
-
 </style>
+
 
 
