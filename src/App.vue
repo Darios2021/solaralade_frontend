@@ -29,35 +29,29 @@
               >
                 Calcular consumo
               </button>
-              <button
-                type="button"
-                class="view-tab"
-                :class="{ active: activeView === 'green' }"
-                @click="activeView = 'green'"
-              >
-                Más información
-              </button>
             </div>
           </div>
 
-          <!-- VISTA FORMULARIO (siempre montada, solo se muestra/oculta) -->
+          <!-- VISTA FORMULARIO -->
           <SolarLeadForm
             v-show="activeView === 'form'"
-            @open-calc="activeView = 'calc'"
-            @open-solar-green="activeView = 'green'"
           />
 
-          <!-- VISTA CALCULADORA -->
+          <!-- VISTA CALCULADORA DE CONSUMO + AHORRO -->
           <ConsumptionCalculator
             v-show="activeView === 'calc'"
-            @open-form="activeView = 'form'"
           />
 
-          <!-- VISTA INFO SOLAR GREEN -->
-          <SolarGreenInfo
-            v-show="activeView === 'green'"
-            @open-form="activeView = 'form'"
-          />
+          <!-- BOTÓN MÁS INFORMACIÓN (link a landing externa) -->
+          <div class="more-info-wrap">
+            <v-btn
+              variant="text"
+              class="more-info-btn"
+              @click="goToMoreInfo"
+            >
+              Más información sobre energía solar
+            </v-btn>
+          </div>
         </v-card>
       </div>
     </v-container>
@@ -68,11 +62,18 @@
 import { ref } from 'vue'
 import SolarLeadForm from './components/SolarLeadForm.vue'
 import ConsumptionCalculator from './components/ConsumptionCalculator.vue'
-import SolarGreenInfo from './components/SolarGreenInfo.vue'
 
 console.log('[solar-calculator] App.vue montado')
 
 const activeView = ref('form')
+
+const moreInfoUrl = 'https://grupoalade.com/calculo-paneles-2'
+
+const goToMoreInfo = () => {
+  if (typeof window !== 'undefined') {
+    window.open(moreInfoUrl, '_blank')
+  }
+}
 </script>
 
 <style scoped>
@@ -149,6 +150,19 @@ const activeView = ref('form')
   background: #2a7c41;
   color: #ffffff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+/* Botón "Más información" al pie */
+.more-info-wrap {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.more-info-btn {
+  text-transform: none !important;
+  font-size: 0.8rem !important;
+  color: #2a7c41 !important;
 }
 
 /* RESPONSIVE */
