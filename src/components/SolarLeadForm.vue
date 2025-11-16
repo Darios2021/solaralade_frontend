@@ -473,5 +473,45 @@ const handleReset = () => {
   background-image: none !important;
   border-image: none !important;
 }
+/* ============================================
+   FIX DEFINITIVO — ELIMINAR LÍNEA FANTASMA EN SELECT (Lead Form)
+============================================ */
+
+/* Borrar borde/linea superior que Elementor mete dentro del v-select */
+:deep(.v-select input),
+:deep(.v-select .v-field__input),
+:deep(.v-select .v-field__input *) {
+  border: none !important;
+  border-top: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Quitar pseudo-elementos que generan la línea interna */
+:deep(.v-select .v-field__input::before),
+:deep(.v-select .v-field__input::after),
+:deep(.v-select .v-field__outline::before),
+:deep(.v-select .v-field__outline::after),
+:deep(.v-select::before),
+:deep(.v-select::after) {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Mantener borde normal del campo */
+:deep(.v-select .v-field) {
+  border-radius: 10px !important;
+  border-width: 1px !important;
+  border-color: rgba(0, 0, 0, 0.20) !important;
+}
+
+/* Estado error: mantener borde rojo */
+:deep(.v-input--error .v-field__outline) {
+  border-color: #c62828 !important;
+  border-width: 2px !important;
+}
+
 
 </style>
