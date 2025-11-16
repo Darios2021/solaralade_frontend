@@ -154,7 +154,6 @@
   </div>
 </template>
 
-
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { jsPDF } from 'jspdf'
@@ -210,7 +209,7 @@ const usages = [
 ]
 
 const usageMap = computed(() =>
-  Object.fromEntries(usages.map(u => [u.value, u]))
+  Object.fromEntries(usages.map(u => [u.value, u])),
 )
 
 /* ============================================
@@ -231,28 +230,28 @@ const rules = {
 const billNumber = computed(() => parseMoney(form.currentBill))
 
 const monthlyKwh = computed(() =>
-  billNumber.value ? estimateMonthlyKwh(billNumber.value) : null
+  billNumber.value ? estimateMonthlyKwh(billNumber.value) : null,
 )
 
 const systemSizeKw = computed(() =>
-  monthlyKwh.value ? estimateSystemSizeKw(monthlyKwh.value) : null
+  monthlyKwh.value ? estimateSystemSizeKw(monthlyKwh.value) : null,
 )
 
 const panels = computed(() =>
-  systemSizeKw.value ? estimatePanels(systemSizeKw.value) : null
+  systemSizeKw.value ? estimatePanels(systemSizeKw.value) : null,
 )
 
 const yearlyKwh = computed(() =>
-  monthlyKwh.value ? estimateYearlyKwh(monthlyKwh.value) : null
+  monthlyKwh.value ? estimateYearlyKwh(monthlyKwh.value) : null,
 )
 
 const yearlySavings = computed(() =>
-  billNumber.value ? estimateYearlySavingsArs(billNumber.value) : null
+  billNumber.value ? estimateYearlySavingsArs(billNumber.value) : null,
 )
 
 // ahorro mensual ~ factura actual
 const monthlySavings = computed(() =>
-  billNumber.value ? billNumber.value : null
+  billNumber.value ? billNumber.value : null,
 )
 
 const canShowResults = computed(() =>
@@ -262,7 +261,7 @@ const canShowResults = computed(() =>
   form.usage &&
   billNumber.value &&
   systemSizeKw.value &&
-  monthlyKwh.value
+  monthlyKwh.value,
 )
 
 /* ============================================
@@ -354,11 +353,10 @@ const handleSubmit = async () => {
       return
     }
 
-    // evento externo
     window.dispatchEvent(
       new CustomEvent('solar-calculator:lead', {
         detail: data.lead || payload,
-      })
+      }),
     )
 
     hasSubmitted.value = true
@@ -373,7 +371,7 @@ const handleSubmit = async () => {
 }
 
 /* ============================================
-   DESCARGAR PDF REAL (jsPDF)
+   DESCARGAR PDF REAL (jsPDF) + MARCA DE PÁGINA
 ============================================ */
 const downloadReceiptPdf = () => {
   if (!canShowResults.value) return
@@ -416,17 +414,43 @@ const downloadReceiptPdf = () => {
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.text('Factura: $' + billNumber.value.toLocaleString('es-AR'), 14, y); y += 5
-  doc.text('Consumo estimado: ' + monthlyKwh.value.toLocaleString('es-AR') + ' kWh/mes', 14, y); y += 5
+  doc.text(
+    'Factura: $' + billNumber.value.toLocaleString('es-AR'),
+    14,
+    y,
+  ); y += 5
+  doc.text(
+    'Consumo estimado: ' +
+      monthlyKwh.value.toLocaleString('es-AR') +
+      ' kWh/mes',
+    14,
+    y,
+  ); y += 5
 
   const panelTxt = panels.value
     ? systemSizeKw.value + ' kWp · ' + panels.value + ' paneles'
     : systemSizeKw.value + ' kWp'
 
   doc.text('Tamaño del sistema: ' + panelTxt, 14, y); y += 5
-  doc.text('Energía anual: ' + yearlyKwh.value.toLocaleString('es-AR') + ' kWh/año', 14, y); y += 5
-  doc.text('Ahorro mensual: $' + monthlySavings.value.toLocaleString('es-AR'), 14, y); y += 5
-  doc.text('Ahorro anual: $' + yearlySavings.value.toLocaleString('es-AR'), 14, y); y += 12
+  doc.text(
+    'Energía anual: ' +
+      yearlyKwh.value.toLocaleString('es-AR') +
+      ' kWh/año',
+    14,
+    y,
+  ); y += 5
+  doc.text(
+    'Ahorro mensual: $' +
+      monthlySavings.value.toLocaleString('es-AR'),
+    14,
+    y,
+  ); y += 5
+  doc.text(
+    'Ahorro anual: $' +
+      yearlySavings.value.toLocaleString('es-AR'),
+    14,
+    y,
+  ); y += 12
 
   const foot =
     'Este comprobante es una estimación inicial. El diseño definitivo y la propuesta económica pueden variar según evaluación técnica del lugar.'
@@ -435,7 +459,11 @@ const downloadReceiptPdf = () => {
   doc.setFontSize(9)
   doc.text(lines, 14, y)
 
-  // descarga directa
+  // Marca de página (branding)
+  doc.setFontSize(8)
+  doc.setTextColor(120, 120, 120)
+  doc.text('Grupo Alade · www.grupoalade.com.ar', 14, 290)
+
   doc.save('simulacion-solar-grupo-alade.pdf')
 }
 
@@ -451,15 +479,6 @@ const resetCalcForm = () => {
 }
 </script>
 
-
-
-
-
-
-
-
-
-
 <style scoped>
 .calc-view {
   display: flex;
@@ -467,21 +486,24 @@ const resetCalcForm = () => {
   gap: 14px;
 }
 
+/* Forzamos contra estilos de Elementor */
 .aux-header {
   margin-bottom: 4px;
 }
 
 .aux-title {
   margin: 0 0 4px;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #1a5934;
+  font-size: 1.05rem !important;
+  line-height: 1.3 !important;
+  font-weight: 700 !important;
+  color: #1a5934 !important;
 }
 
 .aux-subtitle {
   margin: 0;
-  font-size: 0.83rem;
-  color: #4f4f4f;
+  font-size: 0.85rem !important;
+  line-height: 1.4 !important;
+  color: #4f4f4f !important;
 }
 
 .calc-form {
@@ -563,7 +585,7 @@ const resetCalcForm = () => {
 .submit-btn {
   font-weight: 600;
   text-transform: none;
-  min-height: 30px;
+  min-height: 34px;
 }
 
 .secondary-btn {
