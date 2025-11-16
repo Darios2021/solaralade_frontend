@@ -1,179 +1,317 @@
 <template>
   <v-app>
-    <v-main>
-      <v-container class="pa-0" fluid>
-        <v-card class="pa-4 solar-card" elevation="3" rounded="xl">
-          <v-card-title class="text-h6 font-weight-bold">
-            Calculá tu kit de energía solar
-          </v-card-title>
+    <v-container class="pa-0 d-flex justify-center" fluid>
+      <div class="form-wrapper">
+        <v-card class="form-card" elevation="6">
+          <!-- HEADER -->
+          <div class="form-header">
+            <h2 class="form-title">Cotizá tu instalación solar</h2>
+            <p class="form-subtitle">
+              Completá unos datos y te ayudamos a estimar la mejor solución para vos.
+            </p>
+          </div>
 
-          <v-card-subtitle class="text-body-2 mb-3">
-            Ingresá tu consumo y te mostramos una estimación de paneles, potencia y ahorro mensual.
-          </v-card-subtitle>
-
-          <v-divider class="mb-4" />
-
-          <v-form @submit.prevent="onSubmit" v-model="formValid">
-            <div class="form-grid">
-              <v-text-field
-                v-model.number="form.consumoMensualKwh"
-                label="Consumo mensual (kWh)"
-                type="number"
-                min="0"
-                required
-                :rules="[v => !!v || 'Requerido']"
+          <!-- FORM -->
+          <v-form ref="formRef" class="form-body">
+            <!-- Indicador de pasos -->
+            <div class="step-indicator">
+              <span
+                v-for="n in totalSteps"
+                :key="n"
+                class="step-dot"
+                :class="{ active: n === step }"
               />
+            </div>
 
+            <!-- PASO 1: UBICACIÓN -->
+            <div v-if="step === 1" class="step-body">
               <v-text-field
-                v-model="form.facturaPromedio"
-                label="Factura promedio ($ / mes)"
-                type="number"
-                min="0"
+                v-model="form.city"
+                label="Ciudad"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+                :rules="[rules.required]"
               />
 
               <v-select
-                v-model="form.provincia"
-                :items="provincias"
-                label="Provincia"
-                required
-                :rules="[v => !!v || 'Requerido']"
+                v-model="form.province"
+                :items="provinces"
+                label="Seleccionar provincia"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+                :rules="[rules.required]"
               />
 
-              <v-text-field v-model="form.localidad" label="Localidad" />
-              <v-text-field v-model="form.email" label="Email" type="email" required />
-              <v-text-field v-model="form.telefono" label="WhatsApp / Teléfono" />
+              <v-select
+                v-model="form.country"
+                :items="countries"
+                label="País"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+                :rules="[rules.required]"
+              />
             </div>
 
-            <v-btn class="mt-4" color="primary" block size="large" type="submit" :loading="loading">
-              Calcular mi kit solar
-            </v-btn>
+            <!-- PASO 2: MOTIVO -->
+            <div v-else-if="step === 2" class="step-body">
+              <v-select
+                v-model="form.purpose"
+                :items="purposes"
+                label="¿Para qué querés un sistema Solar fotovoltaico?"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+                :rules="[rules.required]"
+              />
+            </div>
+
+            <!-- PASO 3: TIPO DE USO -->
+            <div v-else-if="step === 3" class="step-body">
+              <v-select
+                v-model="form.usage"
+                :items="usages"
+                label="Esto es para:"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+                :rules="[rules.required]"
+              />
+            </div>
+
+            <!-- PASO 4: DATOS DE CONTACTO -->
+            <div v-else-if="step === 4" class="step-body">
+              <v-text-field
+                v-model="form.fullName"
+                label="Nombre y apellido"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+                :rules="[rules.required]"
+              />
+
+              <v-text-field
+                v-model="form.phone"
+                label="Teléfono"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+                :rules="[rules.required]"
+              />
+
+              <v-text-field
+                v-model="form.email"
+                label="Email"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+                :rules="[rules.required, rules.email]"
+              />
+            </div>
+
+            <!-- BOTONES -->
+            <div class="form-actions">
+              <v-btn
+                v-if="step > 1"
+                variant="text"
+                class="mr-2"
+                @click="goPrev"
+              >
+                Anterior
+              </v-btn>
+
+              <v-spacer />
+
+              <v-btn
+                class="submit-btn"
+                color="orange"
+                variant="flat"
+                @click="step < totalSteps ? goNext() : handleSubmit()"
+              >
+                {{ step < totalSteps ? 'Siguiente' : 'Solicitar cotización' }}
+              </v-btn>
+            </div>
           </v-form>
-
-          <v-alert v-if="error" type="error" variant="tonal" class="mt-4">
-            {{ error }}
-          </v-alert>
-
-          <v-expand-transition>
-            <div v-if="resultado" class="mt-4">
-              <v-divider class="mb-4" />
-              <v-card variant="tonal" class="pa-4" rounded="lg">
-                <h3 class="text-subtitle-1 font-weight-bold mb-2">Resultado estimado</h3>
-                <p class="text-body-2 mb-4">Estimación basada en tu consumo.</p>
-
-                <div class="resultado-grid">
-                  <div class="resultado-item" v-for="(v,k) in display" :key="k">
-                    <div class="resultado-label">{{ k }}</div>
-                    <div class="resultado-value">{{ v }}</div>
-                  </div>
-                </div>
-              </v-card>
-            </div>
-          </v-expand-transition>
         </v-card>
-      </v-container>
-    </v-main>
+      </div>
+    </v-container>
   </v-app>
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref } from 'vue'
+
+const step = ref(1)
+const totalSteps = 4
+const formRef = ref(null)
 
 const form = reactive({
-  consumoMensualKwh: null,
-  facturaPromedio: null,
-  provincia: null,
-  localidad: '',
+  city: '',
+  province: '',
+  country: 'Argentina',
+  purpose: '',
+  usage: '',
+  fullName: '',
+  phone: '',
   email: '',
-  telefono: '',
 })
 
-const provincias = [
-  'San Juan', 'Mendoza', 'San Luis', 'La Rioja', 'Córdoba',
-  'Buenos Aires', 'Santa Fe', 'Otra'
+const provinces = [
+  'Buenos Aires',
+  'CABA',
+  'Catamarca',
+  'Chaco',
+  'Chubut',
+  'Córdoba',
+  'Corrientes',
+  'Entre Ríos',
+  'Formosa',
+  'Jujuy',
+  'La Pampa',
+  'La Rioja',
+  'Mendoza',
+  'Misiones',
+  'Neuquén',
+  'Río Negro',
+  'Salta',
+  'San Juan',
+  'San Luis',
+  'Santa Cruz',
+  'Santa Fe',
+  'Santiago del Estero',
+  'Tierra del Fuego',
+  'Tucumán',
 ]
 
-const formValid = ref(false)
-const loading = ref(false)
-const error = ref('')
-const resultado = ref(null)
+const countries = ['Argentina']
 
-const nf = new Intl.NumberFormat('es-AR')
+const purposes = [
+  '1 - Para bajar la huella de carbono.',
+  '2 - Para generar un ahorro en la factura eléctrica.',
+  '3 - Para tener autonomía en caso de cortes de servicio.',
+  '4 - Para tener energía donde no llega la red.',
+  '5 - Para un motor home.',
+  '6 - Bombeo solar para campos.',
+  '7 - Opciones 1, 2, 3 y 4.',
+]
 
-function calcularLocal(f) {
-  const consumo = Number(f.consumoMensualKwh)
-  if (!consumo) throw new Error('Ingresá el consumo.')
+const usages = [
+  'Mi casa',
+  'Mi comercio',
+  'Mi empresa',
+  'Mi casa de fin de semana o veraneo',
+  'Para establecimientos agrícolas',
+  'Otros',
+]
 
-  const produccionPorKwpMes = 130
-  const potenciaRecomendadaKwp = consumo / produccionPorKwpMes
+const rules = {
+  required: v => !!v || 'Campo obligatorio',
+  email: v =>
+    !v ||
+    /.+@.+\..+/.test(v) ||
+    'Email inválido',
+}
 
-  const panel = 0.55
-  const cantidadPaneles = Math.max(1, Math.round(potenciaRecomendadaKwp / panel))
-
-  const produccionEstimadaKwhMes = cantidadPaneles * panel * produccionPorKwpMes
-
-  const valorKwh = f.facturaPromedio && consumo ? f.facturaPromedio / consumo : 120
-  const ahorroEstimadoMensual = produccionEstimadaKwhMes * valorKwh * 0.9
-
-  const costoEstimadoKit = potenciaRecomendadaKwp * 900000
-  const paybackAnios = costoEstimadoKit / (ahorroEstimadoMensual * 12)
-
-  return {
-    potenciaRecomendadaKwp,
-    cantidadPaneles,
-    produccionEstimadaKwhMes,
-    ahorroEstimadoMensual,
-    costoEstimadoKit,
-    paybackAnios,
+const goNext = async () => {
+  if (!formRef.value) return
+  const { valid } = await formRef.value.validate()
+  if (valid && step.value < totalSteps) {
+    step.value++
+    // limpiamos mensajes de validación al cambiar de paso
+    formRef.value.resetValidation()
   }
 }
 
-const display = computed(() => resultado.value ? {
-  'Potencia recomendada': resultado.value.potenciaRecomendadaKwp.toFixed(1) + ' kWp',
-  'Paneles necesarios': resultado.value.cantidadPaneles,
-  'Generación mensual': nf.format(resultado.value.produccionEstimadaKwhMes) + ' kWh',
-  'Ahorro mensual': '$ ' + nf.format(resultado.value.ahorroEstimadoMensual),
-  'Costo estimado': '$ ' + nf.format(resultado.value.costoEstimadoKit),
-  'Payback estimado': resultado.value.paybackAnios.toFixed(1) + ' años'
-} : {})
-
-async function onSubmit() {
-  error.value = ''
-  resultado.value = null
-  loading.value = true
-
-  try {
-    resultado.value = calcularLocal(form)
-  } catch (e) {
-    error.value = e.message
+const goPrev = () => {
+  if (step.value > 1) {
+    step.value--
+    formRef.value?.resetValidation()
   }
+}
 
-  loading.value = false
+const handleSubmit = async () => {
+  if (!formRef.value) return
+  const { valid } = await formRef.value.validate()
+  if (!valid) return
+
+  // Acá integrás con tu backend / webhook / mail, etc.
+  console.log('[solar-calculator] Lead enviado:', { ...form })
+
+  // Por ahora solo feedback simple al usuario
+  alert('¡Gracias! Recibimos tu solicitud de cotización.')
 }
 </script>
 
 <style scoped>
-.solar-card { max-width: 960px; margin: auto; }
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr;
+.form-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.form-card {
+  max-width: 420px;
+  width: 100%;
+  border-radius: 18px;
+  padding: 24px 22px 20px;
+  background-color: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.form-header {
+  margin-bottom: 12px;
+}
+
+.form-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.form-subtitle {
+  font-size: 0.85rem;
+  margin: 0;
+  color: #666;
+}
+
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0 16px;
+}
+
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background-color: #ddd;
+  transition: all 0.2s ease;
+}
+
+.step-dot.active {
+  width: 18px;
+  background-color: #ff9800;
+}
+
+.step-body {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
-.resultado-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 18px;
 }
-.resultado-item {
-  padding: 10px;
-  border-radius: 8px;
-  background: rgba(0,0,0,.05);
-}
-.resultado-label {
-  font-size: .85rem;
-  opacity: .7;
-}
-.resultado-value {
-  font-size: 1rem;
+
+.submit-btn {
+  min-width: 160px;
   font-weight: 600;
+  color: #fff;
 }
 </style>
