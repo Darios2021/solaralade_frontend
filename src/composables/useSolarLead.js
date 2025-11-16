@@ -1,5 +1,5 @@
 // src/composables/useSolarLead.js
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { postLead } from '../service/apiClient'
 import {
   estimateMonthlyKwh,
@@ -309,6 +309,32 @@ export function useSolarLead() {
     lastLead.value = null
     formRef.value?.resetValidation()
   }
+
+  // 🔗 INTEGRACIÓN CON LA CALCULADORA (evento solar-calculator:use-bill)
+  let removeListener = null
+
+  onMounted(() => {
+    if (typeof window === 'undefined') return
+
+    const handler = evt => {
+      const bill = evt.detail
+      console.log('[solar-calculator] Recibido use-bill:', bill)
+
+      if (bill != null && !Number.isNaN(Number(bill))) {
+        form.currentBill = Number(bill)
+        // nos aseguramos de estar al menos en el paso 3 (uso + factura)
+        if (step.value < 3) step.value = 3
+      }
+    }
+
+    window.addEventListener('solar-calculator:use-bill', handler)
+    removeListener = () =>
+      window.removeEventListener('solar-calculator:use-bill', handler)
+  })
+
+  onBeforeUnmount(() => {
+    if (removeListener) removeListener()
+  })
 
   return {
     step,
