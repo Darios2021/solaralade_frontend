@@ -1,42 +1,33 @@
-import { defineConfig, loadEnv } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import vuetify from 'vite-plugin-vuetify'
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig(({ mode }) => {
+  const ENTRIES = {
+    calculator: "src/apps/calculatorApp.js",
+    green: "src/apps/solarGreenApp.js",
+  };
+
   return {
-    plugins: [
-      vue(),
-      vuetify({ autoImport: true }),
-    ],
+    plugins: [vue(), vuetify({ autoImport: true })],
 
     build: {
-      outDir: 'dist',
-      emptyOutDir: false, // importante: no borrar build anterior
+      outDir: "dist",
+      emptyOutDir: false,
 
       lib: {
-        entry:
-          mode === 'green'
-            ? 'src/apps/solarGreenApp.js'
-            : 'src/apps/calculatorApp.js',
-
-        name:
-          mode === 'green'
-            ? 'SolarGreenLanding'
-            : 'SolarCalculator',
-
-        fileName:
-          mode === 'green'
-            ? () => 'solar-green.js'
-            : () => 'solar-calculator.js',
-
-        formats: ['iife'],
+        entry: ENTRIES[mode],
+        name: mode === "calculator" ? "SolarCalculator" : "SolarGreenLanding",
+        formats: ["iife"],
+        fileName: () =>
+          mode === "calculator" ? "solar-calculator.js" : "solar-green.js",
       },
 
       rollupOptions: {
         output: {
-          assetFileNames: 'assets/[name].[ext]',
+          assetFileNames: "assets/[name].[ext]",
         },
       },
     },
-  }
-})
+  };
+});
