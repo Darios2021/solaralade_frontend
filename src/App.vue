@@ -714,9 +714,9 @@ const resetFlow = () => {
 }
 </style>
 
-<!-- Estilos globales para que Elementor no rompa nada y para mobile/tablet -->
+<!-- Estilos globales para blindar contra Elementor -->
 <style>
-/* Fondo transparente del v-app dentro del contenedor del simulador */
+/* Caja del simulador: fondo transparente */
 #solar-calculator .solar-app,
 #solar-calculator .solar-app .v-application__wrap,
 #solar-calculator .solar-app .v-main,
@@ -725,25 +725,40 @@ const resetFlow = () => {
   box-shadow: none;
 }
 
-/* BOTONES VUETIFY: evitar subrayados/mayúsculas heredados */
+/* Evitar que Elementor cambie box-sizing */
+#solar-calculator *,
+#solar-calculator *::before,
+#solar-calculator *::after {
+  box-sizing: border-box;
+}
+
+/* BOTONES VUETIFY: tamaño, padding y texto consistente */
 #solar-calculator .v-btn,
 #solar-calculator .v-btn:link,
 #solar-calculator .v-btn:visited {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 32px !important;
+  min-height: 44px !important;
+  height: auto !important;
+  border-radius: 999px !important;
   text-decoration: none !important;
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 600;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-weight: 600 !important;
 }
 
 #solar-calculator .v-btn__content {
   text-decoration: none !important;
-  text-transform: none;
+  text-transform: none !important;
+  line-height: 1.1 !important;
 }
 
-/* Por si Elementor toca cualquier <button> */
+/* Por si Elementor toca cualquier <button> genérico */
 #solar-calculator button {
-  text-decoration: none;
-  text-transform: none;
+  text-decoration: none !important;
+  text-transform: none !important;
 }
 
 /* Inputs / selects Vuetify */
@@ -755,13 +770,20 @@ const resetFlow = () => {
   text-transform: none;
 }
 
+#solar-calculator .v-field__input,
+#solar-calculator .v-text-field input,
+#solar-calculator .v-select input {
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
 /* Mensajes de error */
 #solar-calculator .v-messages__message {
   font-size: 0.75rem;
   text-transform: none;
 }
 
-/* Limpiar sombras/bordes globales */
+/* Limpiar sombras/bordes heredados */
 #solar-calculator button,
 #solar-calculator input,
 #solar-calculator select,
@@ -769,7 +791,7 @@ const resetFlow = () => {
   box-shadow: none;
 }
 
-/* Ajuste del contenido del dialog en mobile/tablet (margen lateral) */
+/* Ajuste del dialog en mobile */
 @media (max-width: 600px) {
   #solar-calculator .v-overlay__content {
     margin: 0 10px !important;
