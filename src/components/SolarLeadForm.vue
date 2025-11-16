@@ -1,0 +1,497 @@
+<template>
+  <div class="lead-form">
+    <v-form ref="formRef" class="form-body">
+      <!-- Indicador de pasos -->
+      <div class="step-indicator">
+        <span
+          v-for="n in totalSteps"
+          :key="n"
+          class="step-dot"
+          :class="{ active: n === step }"
+        />
+      </div>
+
+      <!-- PASO 1: UBICACIÓN -->
+      <div v-if="step === 1" class="step-body">
+        <v-text-field
+          v-model="form.city"
+          label="Ciudad"
+          variant="outlined"
+          density="comfortable"
+          hide-details="auto"
+          :rules="[rules.required]"
+        />
+
+        <v-select
+          v-model="form.province"
+          :items="provinces"
+          item-title="label"
+          item-value="value"
+          label="Seleccionar provincia"
+          variant="outlined"
+          density="comfortable"
+          hide-details="auto"
+          :rules="[rules.required]"
+        />
+
+        <v-select
+          v-model="form.country"
+          :items="countries"
+          item-title="label"
+          item-value="value"
+          label="País"
+          variant="outlined"
+          density="comfortable"
+          hide-details="auto"
+          :rules="[rules.required]"
+        />
+      </div>
+
+      <!-- PASO 2: MOTIVO -->
+      <div v-else-if="step === 2" class="step-body">
+        <v-select
+          v-model="form.purpose"
+          :items="purposes"
+          item-title="label"
+          item-value="value"
+          label="¿Para qué querés un sistema Solar fotovoltaico?"
+          variant="outlined"
+          density="comfortable"
+          hide-details="auto"
+          :rules="[rules.required]"
+        />
+      </div>
+
+      <!-- PASO 3: TIPO DE USO -->
+      <div v-else-if="step === 3" class="step-body">
+        <v-select
+          v-model="form.usage"
+          :items="usages"
+          item-title="label"
+          item-value="value"
+          label="Esto es para:"
+          variant="outlined"
+          density="comfortable"
+          hide-details="auto"
+          :rules="[rules.required]"
+        />
+
+        <v-text-field
+          v-model="form.currentBill"
+          label="¿Cuánto pagás aprox. de luz al mes? (ARS)"
+          type="number"
+          variant="outlined"
+          density="comfortable"
+          hide-details="auto"
+          :rules="[rules.requiredNumber]"
+        />
+      </div>
+
+      <!-- PASO 4: DATOS DE CONTACTO -->
+      <div v-else-if="step === 4" class="step-body">
+        <v-text-field
+          v-model="form.fullName"
+          label="Nombre y apellido"
+          variant="outlined"
+          density="comfortable"
+          hide-details="auto"
+          :rules="[rules.required]"
+        />
+
+        <v-text-field
+          v-model="form.phone"
+          label="Teléfono"
+          variant="outlined"
+          density="comfortable"
+          hide-details="auto"
+          :rules="[rules.required]"
+        />
+
+        <v-text-field
+          v-model="form.email"
+          label="Email"
+          variant="outlined"
+          density="comfortable"
+          hide-details="auto"
+          :rules="[rules.required, rules.email]"
+        />
+      </div>
+
+      <!-- BOTONES FORM -->
+      <div class="form-actions">
+        <v-btn
+          v-if="step > 1"
+          variant="text"
+          class="back-btn"
+          :disabled="isSubmitting"
+          @click="goPrev"
+        >
+          Anterior
+        </v-btn>
+
+        <v-spacer />
+
+        <v-btn
+          class="submit-btn"
+          color="primary"
+          variant="flat"
+          :loading="isSubmitting"
+          :disabled="isSubmitting"
+          @click="step < totalSteps ? goNext() : handleSubmit()"
+        >
+          {{ step < totalSteps ? 'Siguiente' : 'Solicitar cotización' }}
+        </v-btn>
+      </div>
+
+      <!-- MENSAJE DE ERROR SIMPLE -->
+      <p v-if="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </p>
+    </v-form>
+
+    <!-- MODAL DE ÉXITO -->
+    <v-dialog
+      v-model="showSuccess"
+      max-width="430"
+      persistent
+      transition="scale-transition"
+    >
+      <v-card class="success-card">
+        <div class="success-icon-wrap">
+          <v-icon size="40" class="success-icon">mdi-check-circle</v-icon>
+        </div>
+        <h3 class="success-title">
+          ¡Gracias{{ form.fullName ? `, ${form.fullName}` : '' }}!
+        </h3>
+
+        <p class="success-copy">
+          Recibimos tu solicitud de cotización. Un asesor de Grupo Alade se va a
+          contactar al
+          <strong>{{ form.phone || 'teléfono que nos indicaste' }}</strong>
+          <span v-if="form.email">
+            y al correo <strong>{{ form.email }}</strong>
+          </span>
+          en las próximas horas hábiles.
+        </p>
+
+        <div class="success-summary">
+          <div class="success-row">
+            <span class="success-label">Ubicación</span>
+            <span class="success-value">{{ summaryLocation }}</span>
+          </div>
+          <div class="success-row">
+            <span class="success-label">Uso del sistema</span>
+            <span class="success-value">{{ summaryUsage }}</span>
+          </div>
+          <div class="success-row">
+            <span class="success-label">Factura actual</span>
+            <span class="success-value">{{ summaryBill }}</span>
+          </div>
+          <div class="success-row">
+            <span class="success-label">Tamaño estimado</span>
+            <span class="success-value">{{ summarySystemSize }}</span>
+          </div>
+        </div>
+
+        <p class="success-footnote">
+          Podés cerrar esta ventana, no necesitás hacer nada más.
+        </p>
+
+        <div class="success-actions">
+          <v-btn
+            class="success-btn success-btn--primary"
+            color="primary"
+            variant="flat"
+            @click="handleReset"
+          >
+            Hacer otra simulación
+          </v-btn>
+
+          <v-btn
+            class="success-btn success-btn--secondary"
+            variant="outlined"
+            color="primary"
+            @click="handleOpenCalc"
+          >
+            Realizar cálculo de consumo
+          </v-btn>
+
+          <v-btn
+            class="success-btn success-btn--ghost"
+            variant="text"
+            @click="handleOpenSolarGreen"
+          >
+            Ir a Solar Green Alade
+          </v-btn>
+
+          <v-btn
+            class="success-btn success-btn--ghost"
+            variant="text"
+            @click="closeOnly"
+          >
+            Cerrar
+          </v-btn>
+        </div>
+      </v-card>
+    </v-dialog>
+  </div>
+</template>
+
+<script setup>
+import { defineEmits } from 'vue'
+import { useSolarLead } from '../composables/useSolarLead'
+
+const emit = defineEmits(['open-calc', 'open-solar-green'])
+
+// Composable con toda la lógica del lead
+const {
+  step,
+  totalSteps,
+  formRef,
+  form,
+  provinces,
+  countries,
+  purposes,
+  usages,
+  rules,
+  isSubmitting,
+  errorMessage,
+  showSuccess,
+  lastLead,
+  summaryLocation,
+  summaryUsage,
+  summaryBill,
+  summarySystemSize,
+  goNext,
+  goPrev,
+  handleSubmit,
+  resetFlow,
+  closeOnly,
+} = useSolarLead()
+
+const handleReset = () => {
+  resetFlow()
+}
+
+const handleOpenCalc = () => {
+  showSuccess.value = false
+  emit('open-calc')
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('solar-calculator:open-consumption-calc', {
+        detail: lastLead.value || null,
+      }),
+    )
+  }
+}
+
+const handleOpenSolarGreen = () => {
+  showSuccess.value = false
+  emit('open-solar-green')
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('solar-calculator:open-solar-green', {
+        detail: lastLead.value || null,
+      }),
+    )
+  }
+}
+</script>
+
+<style scoped>
+.lead-form {
+  width: 100%;
+}
+
+.form-body {
+  margin-top: 8px;
+}
+
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0 14px;
+}
+
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background-color: #d3d3d3;
+  transition: all 0.2s ease;
+}
+
+.step-dot.active {
+  width: 20px;
+  background-color: #2a7c41;
+}
+
+.step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.back-btn {
+  color: #1a5934;
+  text-transform: none;
+}
+
+/* BOTÓN principal */
+.submit-btn {
+  min-width: 140px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: none;
+}
+
+.error-message {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: #c62828;
+}
+
+/* MODAL ÉXITO */
+.success-card {
+  padding: 18px 18px 16px;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.success-icon-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.success-icon {
+  color: #2a7c41;
+  animation: pop-in 0.45s ease-out;
+}
+
+@keyframes pop-in {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.success-title {
+  margin: 4px 0 6px;
+  font-size: 1.12rem;
+  font-weight: 800;
+  text-align: center;
+  color: #1a5934;
+}
+
+.success-copy {
+  margin: 0 auto 12px;
+  font-size: 0.84rem;
+  color: #444;
+  text-align: center;
+}
+
+.success-summary {
+  margin: 0 auto 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #f5fbf7;
+  border: 1px solid rgba(42, 124, 65, 0.16);
+  font-size: 0.78rem;
+}
+
+.success-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.success-row:last-child {
+  margin-bottom: 0;
+}
+
+.success-label {
+  font-weight: 600;
+  color: #1a5934;
+}
+
+.success-value {
+  text-align: right;
+  color: #333;
+}
+
+.success-footnote {
+  margin: 4px 0 8px;
+  font-size: 0.75rem;
+  color: #666;
+  text-align: center;
+}
+
+/* Acciones modal */
+.success-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.success-btn {
+  width: 100%;
+  justify-content: center;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  min-height: 34px !important;
+  border-radius: 999px !important;
+}
+
+.success-btn--secondary {
+  background-color: #ffffff !important;
+}
+
+.success-btn--ghost {
+  font-weight: 500 !important;
+}
+
+/* MOBILE */
+@media (max-width: 600px) {
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .submit-btn {
+    width: 100%;
+    min-width: 0;
+  }
+  .back-btn {
+    align-self: flex-start;
+    padding-left: 0;
+  }
+  .success-card {
+    padding: 16px 14px 14px;
+  }
+  .success-summary {
+    font-size: 0.74rem;
+  }
+}
+</style>
