@@ -9,10 +9,31 @@ import * as directives from 'vuetify/directives'
 const vuetify = createVuetify({
   components,
   directives,
+  theme: {
+    defaultTheme: 'aladeLight',
+    themes: {
+      aladeLight: {
+        dark: false,
+        colors: {
+          primary: '#2a7c41',      // Verde principal
+          secondary: '#1a5934',    // Verde oscuro
+          background: '#ffffff',
+          surface: '#ffffff',
+          'on-primary': '#ffffff',
+          'on-secondary': '#ffffff',
+          // tono suave para fondos y resaltados
+          'primary-soft': '#e0f2e7',
+        },
+      },
+    },
+  },
 })
 
-// Función de montaje que podemos invocar desde WordPress
-export function mountSolarCalculator(targetId = 'solar-calculator', props = {}) {
+/**
+ * Monta el calculador dentro de un div por id (para WordPress/Elementor)
+ * Ej: window.SolarCalculator.mount('solar-calculator')
+ */
+function mountSolarCalculator(targetId = 'solar-calculator', props = {}) {
   const el = document.getElementById(targetId)
 
   if (!el) {
@@ -27,9 +48,12 @@ export function mountSolarCalculator(targetId = 'solar-calculator', props = {}) 
   return app
 }
 
-// Exponer una API global para usar desde el <script> de Elementor
-if (typeof window !== 'undefined') {
-  window.SolarCalculator = {
-    mount: mountSolarCalculator,
-  }
+// Montaje automático si existe el div
+if (document.getElementById('solar-calculator')) {
+  mountSolarCalculator()
+}
+
+// API global para usar desde WordPress
+window.SolarCalculator = {
+  mount: mountSolarCalculator,
 }
