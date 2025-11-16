@@ -665,9 +665,13 @@ const resetFlow = () => {
 }
 </style>
 
-<!-- Estilos globales para que Elementor no rompa nada -->
+<!-- Estilos globales para aislar el simulador dentro de #solar-calculator -->
 <style>
-/* Fondo transparente del v-app dentro del contenedor del simulador */
+/* Fondo transparente aunque el theme/Elementor meta colores propios */
+#solar-calculator .v-application,
+#solar-calculator .v-application__wrap,
+#solar-calculator .v-main,
+#solar-calculator .v-container,
 #solar-calculator .solar-app,
 #solar-calculator .solar-app .v-application__wrap,
 #solar-calculator .solar-app .v-main,
@@ -676,7 +680,7 @@ const resetFlow = () => {
   box-shadow: none;
 }
 
-/* BOTONES VUETIFY: evitar subrayados/mayúsculas heredados */
+/* Botones Vuetify: evitar que Elementor los subraye o cambie tipografía */
 #solar-calculator .v-btn,
 #solar-calculator .v-btn:link,
 #solar-calculator .v-btn:visited {
@@ -684,6 +688,7 @@ const resetFlow = () => {
   text-transform: none;
   letter-spacing: 0;
   font-weight: 600;
+  border-radius: 999px;
 }
 
 #solar-calculator .v-btn__content {
@@ -691,13 +696,13 @@ const resetFlow = () => {
   text-transform: none;
 }
 
-/* Por si Elementor toca cualquier <button> */
+/* Por si Elementor mete estilos generales a cualquier <button> */
 #solar-calculator button {
   text-decoration: none;
-  text-transform: none;
+  box-shadow: none;
 }
 
-/* Inputs / selects Vuetify */
+/* Inputs Vuetify: que no hereden rarezas de formularios Elementor */
 #solar-calculator .v-field,
 #solar-calculator .v-input,
 #solar-calculator .v-text-field,
@@ -712,8 +717,7 @@ const resetFlow = () => {
   text-transform: none;
 }
 
-/* Limpiar sombras/bordes globales */
-#solar-calculator button,
+/* Limpiar sombras/bordes globales en controles */
 #solar-calculator input,
 #solar-calculator select,
 #solar-calculator textarea {
