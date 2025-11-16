@@ -388,6 +388,7 @@ function scrollToInfo() {
   text-transform: none !important;
   font-weight: 500 !important;
   font-size: 0.82rem !important;
+  color: #1a5634 !important;
 }
 
 /* pasos */
@@ -398,7 +399,7 @@ function scrollToInfo() {
   margin-bottom: 6px;
 }
 
-/* FAQ panels: arreglar verde roto */
+/* FAQ panels */
 .faq-panels {
   max-width: 900px;
   margin: 0 auto;
@@ -449,6 +450,45 @@ function scrollToInfo() {
 .cta-button {
   border-color: #ffffff !important;
   color: #ffffff !important;
+}
+
+/* -------- Overrides específicos del FORM (botones/textos) -------- */
+
+/* evitar subrayados y herencias raras de WP */
+#solar-calculator :deep(a),
+#solar-calculator :deep(button),
+#solar-calculator :deep(.v-btn),
+#solar-calculator :deep(.v-btn__content) {
+  text-decoration: none !important;
+}
+
+/* headings internos del form */
+#solar-calculator :deep(h2),
+#solar-calculator :deep(h3) {
+  color: #1a5634;
+}
+
+/* botón principal "Ver mi ahorro y que me contacten" (elevated) */
+#solar-calculator :deep(.v-btn.v-btn--elevated),
+#solar-calculator :deep(.v-btn.v-btn--flat.primary),
+#solar-calculator :deep(.v-btn.v-btn--flat.bg-primary) {
+  background-color: #1a5634 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+  text-transform: none !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 0.02em;
+}
+
+/* otros botones dentro del form: que sigan el mismo estilo suave */
+#solar-calculator :deep(.v-btn) {
+  border-radius: 999px !important;
+}
+
+/* inputs */
+#solar-calculator :deep(.v-field) {
+  border-radius: 14px !important;
 }
 
 /* evitar sombras raras en componentes dentro del simulador */
