@@ -136,6 +136,7 @@
                 v-if="step > 1"
                 variant="text"
                 class="mr-2 back-btn"
+                :disabled="isSubmitting"
                 @click="goPrev"
               >
                 Anterior
@@ -147,11 +148,18 @@
                 class="submit-btn"
                 color="primary"
                 variant="flat"
+                :loading="isSubmitting"
+                :disabled="isSubmitting"
                 @click="step < totalSteps ? goNext() : handleSubmit()"
               >
                 {{ step < totalSteps ? 'Siguiente' : 'Solicitar cotización' }}
               </v-btn>
             </div>
+
+            <!-- MENSAJE DE ERROR SIMPLE -->
+            <p v-if="errorMessage" class="error-message">
+              {{ errorMessage }}
+            </p>
           </v-form>
         </v-card>
       </div>
@@ -161,10 +169,13 @@
 
 <script setup>
 import { reactive, ref, computed } from 'vue'
+import { postLead } from './service/apiClient'
 
 const step = ref(1)
 const totalSteps = 4
 const formRef = ref(null)
+const isSubmitting = ref(false)
+const errorMessage = ref('')
 
 // === DATOS DEL FORM ===
 const form = reactive({
@@ -179,7 +190,7 @@ const form = reactive({
   email: '',
 })
 
-// Catálogos con códigos + labels (lógica de negocio seria)
+// Catálogos con códigos + labels
 const provinces = [
   { value: 'BA', label: 'Buenos Aires' },
   { value: 'CABA', label: 'CABA' },
@@ -187,7 +198,6 @@ const provinces = [
   { value: 'SL', label: 'San Luis' },
   { value: 'MZA', label: 'Mendoza' },
   { value: 'CB', label: 'Córdoba' },
-  // ...podés seguir sumando
 ]
 
 const countries = [{ value: 'AR', label: 'Argentina' }]
@@ -239,7 +249,7 @@ const usages = [
   { value: 'other', label: 'Otros', segment: 'Otros' },
 ]
 
-// Mapas para lookup rápido en la lógica
+// Mapas para lookup rápido
 const purposeMap = computed(() =>
   Object.fromEntries(purposes.map(p => [p.value, p]))
 )
@@ -258,6 +268,7 @@ const rules = {
 
 // === NAVEGACIÓN ENTRE PASOS ===
 const goNext = async () => {
+  errorMessage.value = ''
   if (!formRef.value) return
   const { valid } = await formRef.value.validate()
   if (valid && step.value < totalSteps) {
@@ -267,6 +278,7 @@ const goNext = async () => {
 }
 
 const goPrev = () => {
+  errorMessage.value = ''
   if (step.value > 1) {
     step.value--
     formRef.value?.resetValidation()
@@ -275,24 +287,19 @@ const goPrev = () => {
 
 // === LÓGICA DE NEGOCIO DE LEAD ===
 
-// Estimación MUY simple de consumo en kWh a partir de la factura (ARS)
-// Esto después lo podemos refinar con tarifas reales de San Juan / EPRE.
 function estimateMonthlyKwh(billArs) {
   const bill = Number(billArs) || 0
-  const avgTariff = 120; // ARS/kWh aprox (placeholder razonable)
+  const avgTariff = 120 // ARS/kWh aprox
   if (!bill) return null
   return Math.round(bill / avgTariff)
 }
 
-// Estimar tamaño de sistema recomendado (kWp) desde los kWh mensuales
 function estimateSystemSizeKw(monthlyKwh) {
   if (!monthlyKwh) return null
-  // Regla aproximada: 1 kWp genera ~130 kWh/mes (depende provincia, aquí promedio)
-  const kwhPerKw = 130
+  const kwhPerKw = 130 // kWh/mes por kWp (aprox)
   return Number((monthlyKwh / kwhPerKw).toFixed(1))
 }
 
-// Derivar prioridad según motivo + factura
 function estimatePriority(purpose, monthlyBill) {
   const bill = Number(monthlyBill) || 0
   const driver = purposeMap.value[purpose]?.driver
@@ -304,7 +311,6 @@ function estimatePriority(purpose, monthlyBill) {
   return 'A evaluar'
 }
 
-// Construir payload completo para enviar a backend / CRM
 function buildLeadPayload() {
   const province = provinces.find(p => p.value === form.province) || null
   const country = countries.find(c => c.value === form.country) || null
@@ -349,30 +355,45 @@ function buildLeadPayload() {
 }
 
 const handleSubmit = async () => {
+  errorMessage.value = ''
+
   if (!formRef.value) return
   const { valid } = await formRef.value.validate()
   if (!valid) return
 
   const payload = buildLeadPayload()
+  isSubmitting.value = true
 
-  // 1) Log de control desarrollador
-  console.log('[solar-calculator] Lead generado', payload)
+  try {
+    const data = await postLead(payload)
 
-  // 2) Disparar evento global para que WordPress / GTM / scripts externos lo capten
-  window.dispatchEvent(
-    new CustomEvent('solar-calculator:lead', { detail: payload })
-  )
+    if (!data.ok) {
+      console.error('[solar-calculator] Respuesta backend no OK:', data)
+      errorMessage.value =
+        'No pudimos registrar tu solicitud, contactanos por los canales habituales.'
+      return
+    }
 
-  // 3) TODO: acá podrías hacer fetch a tu backend / webhook:
-  // await fetch('https://api.grupoalade.com/solar/leads', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(payload),
-  // })
+    console.log('[solar-calculator] Lead generado', data)
 
-  alert(
-    '¡Gracias! Recibimos tu solicitud de cotización. Un asesor de Grupo Alade se pondrá en contacto con vos.'
-  )
+    window.dispatchEvent(
+      new CustomEvent('solar-calculator:lead', { detail: data.lead || payload })
+    )
+
+    alert(
+      '¡Gracias! Recibimos tu solicitud de cotización. Un asesor de Grupo Alade se pondrá en contacto con vos.'
+    )
+
+    // Si querés, descomentá para resetear:
+    // formRef.value.reset()
+    // step.value = 1
+  } catch (err) {
+    console.error('[solar-calculator] Error al enviar lead:', err)
+    errorMessage.value =
+      'No pudimos conectar con el servidor. Verificá tu conexión e intentá de nuevo.'
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
@@ -465,7 +486,12 @@ const handleSubmit = async () => {
   text-transform: none;
 }
 
-/* Responsive pequeño */
+.error-message {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: #c62828;
+}
+
 @media (max-width: 600px) {
   .form-card {
     max-width: 100%;
