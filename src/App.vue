@@ -10,10 +10,44 @@
             <p class="form-subtitle">
               Completá unos datos y te ayudamos a estimar la mejor solución para vos.
             </p>
+
+            <!-- SWITCH DE VISTAS -->
+            <div class="view-tabs">
+              <button
+                type="button"
+                class="view-tab"
+                :class="{ active: activeView === 'form' }"
+                @click="activeView = 'form'"
+              >
+                Formulario
+              </button>
+              <button
+                type="button"
+                class="view-tab"
+                :class="{ active: activeView === 'calc' }"
+                @click="activeView = 'calc'"
+              >
+                Calcular consumo
+              </button>
+              <button
+                type="button"
+                class="view-tab"
+                :class="{ active: activeView === 'info' }"
+                @click="activeView = 'info'"
+              >
+                Más información
+              </button>
+            </div>
           </div>
 
-          <!-- FORMULARIO -->
-          <v-form ref="formRef" class="form-body">
+          <!-- ===================== -->
+          <!-- VISTA 1: FORMULARIO   -->
+          <!-- ===================== -->
+          <v-form
+            v-if="activeView === 'form'"
+            ref="formRef"
+            class="form-body"
+          >
             <!-- Indicador de pasos -->
             <div class="step-indicator">
               <span
@@ -130,7 +164,7 @@
               />
             </div>
 
-            <!-- BOTONES -->
+            <!-- BOTONES FORM -->
             <div class="form-actions">
               <v-btn
                 v-if="step > 1"
@@ -161,6 +195,123 @@
               {{ errorMessage }}
             </p>
           </v-form>
+
+          <!-- ========================= -->
+          <!-- VISTA 2: CALCULAR CONSUMO -->
+          <!-- ========================= -->
+          <div
+            v-else-if="activeView === 'calc'"
+            class="aux-view aux-view--calc"
+          >
+            <div class="aux-header">
+              <h3 class="aux-title">Calculá tu consumo estimado</h3>
+              <p class="aux-subtitle">
+                Ingresá el valor aproximado de tu factura mensual de luz y te
+                mostramos una estimación rápida de consumo y tamaño de sistema.
+              </p>
+            </div>
+
+            <v-text-field
+              v-model="calcBill"
+              label="Factura promedio de luz (ARS)"
+              type="number"
+              variant="outlined"
+              density="comfortable"
+              hide-details="auto"
+            />
+
+            <div v-if="hasCalcData" class="calc-summary">
+              <div class="calc-row">
+                <span class="calc-label">Consumo estimado</span>
+                <span class="calc-value">
+                  ≈ {{ calcMonthlyKwh }} kWh/mes
+                </span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-label">Tamaño sugerido del sistema</span>
+                <span class="calc-value">
+                  ≈ {{ calcSystemSize }} kWp
+                </span>
+              </div>
+              <div v-if="calcPanels" class="calc-row">
+                <span class="calc-label">Cantidad de paneles</span>
+                <span class="calc-value">
+                  ≈ {{ calcPanels }}
+                </span>
+              </div>
+              <div v-if="calcYearlyKwh" class="calc-row">
+                <span class="calc-label">Energía anual estimada</span>
+                <span class="calc-value">
+                  ≈ {{ calcYearlyKwh }} kWh/año
+                </span>
+              </div>
+              <div v-if="calcYearlySavings" class="calc-row">
+                <span class="calc-label">Ahorro anual estimado</span>
+                <span class="calc-value">
+                  ≈ ${{ calcYearlySavings.toLocaleString('es-AR') }}
+                </span>
+              </div>
+            </div>
+
+            <div class="aux-actions">
+              <v-btn
+                class="submit-btn"
+                color="primary"
+                variant="flat"
+                @click="goToFormFromCalc"
+              >
+                Quiero que me contacten
+              </v-btn>
+
+              <v-btn
+                variant="text"
+                class="back-btn aux-back-btn"
+                @click="activeView = 'form'"
+              >
+                Volver al formulario
+              </v-btn>
+            </div>
+          </div>
+
+          <!-- ========================= -->
+          <!-- VISTA 3: MÁS INFORMACIÓN  -->
+          <!-- ========================= -->
+          <div v-else class="aux-view aux-view--info">
+            <div class="aux-header">
+              <h3 class="aux-title">Solar Green · Grupo Alade</h3>
+              <p class="aux-subtitle">
+                Conocé más sobre nuestras soluciones solares integrales,
+                financiamiento y casos reales de clientes que ya están
+                generando su propia energía limpia.
+              </p>
+            </div>
+
+            <ul class="info-list">
+              <li>Proyectos llave en mano residenciales, comerciales y agro.</li>
+              <li>Equipos certificados y primeras marcas internacionales.</li>
+              <li>Acompañamiento técnico desde el diseño hasta la puesta en marcha.</li>
+              <li>Opciones de financiamiento y beneficios impositivos vigentes.</li>
+            </ul>
+
+            <div class="aux-actions">
+              <v-btn
+                class="submit-btn"
+                color="primary"
+                variant="flat"
+                @click="goToSolarGreen"
+              >
+                Ir a Solar Green Alade
+              </v-btn>
+
+              <v-btn
+                variant="text"
+                class="back-btn aux-back-btn"
+                @click="activeView = 'form'"
+              >
+                Volver al simulador
+              </v-btn>
+            </div>
+          </div>
         </v-card>
       </div>
     </v-container>
@@ -213,13 +364,35 @@
           Podés cerrar esta ventana, no necesitás hacer nada más.
         </p>
 
+        <!-- ACCIONES DEL MODAL - EN COLUMNA PARA QUE NO SE ROMPAN -->
         <div class="success-actions">
-          <v-btn variant="text" class="mr-2" @click="closeOnly">
-            Cerrar
+          <v-btn
+            class="submit-btn"
+            color="primary"
+            variant="flat"
+            @click="resetFlow"
+          >
+            Hacer otra simulación
           </v-btn>
 
-          <v-btn class="submit-btn" color="primary" variant="flat" @click="resetFlow">
-            Hacer otra simulación
+          <v-btn
+            variant="outlined"
+            class="success-secondary-btn"
+            @click="openConsumptionCalc"
+          >
+            Realizar cálculo de consumo
+          </v-btn>
+
+          <v-btn
+            variant="text"
+            class="success-link-btn"
+            @click="goToSolarGreen"
+          >
+            Ir a Solar Green Alade
+          </v-btn>
+
+          <v-btn variant="text" class="success-link-btn" @click="closeOnly">
+            Cerrar
           </v-btn>
         </div>
       </v-card>
@@ -245,6 +418,15 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const showSuccess = ref(false)
 const lastLead = ref(null)
+
+// VISTA ACTIVA: 'form' | 'calc' | 'info'
+const activeView = ref('form')
+
+// URL de Solar Green (podés sobreescribirla desde el sitio si querés)
+const solarGreenUrl =
+  typeof window !== 'undefined' && window.SOLAR_GREEN_URL
+    ? window.SOLAR_GREEN_URL
+    : 'https://grupoalade.com.ar/solar-green'
 
 const createInitialForm = () => ({
   city: '',
@@ -295,10 +477,10 @@ const usages = [
 ]
 
 const purposeMap = computed(() =>
-  Object.fromEntries(purposes.map(p => [p.value, p]))
+  Object.fromEntries(purposes.map(p => [p.value, p])),
 )
 const usageMap = computed(() =>
-  Object.fromEntries(usages.map(u => [u.value, u]))
+  Object.fromEntries(usages.map(u => [u.value, u])),
 )
 
 // =======================
@@ -532,7 +714,7 @@ const summaryBill = computed(() => {
   return `Aprox. $${n.toLocaleString('es-AR')} / mes`
 })
 
-// Para vista previa y resumen
+// Para vista previa y resumen del formulario
 const previewKwh = computed(() => estimateMonthlyKwh(form.currentBill))
 const previewSystemSize = computed(() =>
   estimateSystemSizeKw(previewKwh.value),
@@ -546,7 +728,51 @@ const summarySystemSize = computed(() => {
 })
 
 // =======================
-//   RESET / MODAL
+//   CALCULADORA RÁPIDA
+// =======================
+
+const calcBill = ref(null)
+
+const calcMonthlyKwh = computed(() => {
+  if (!calcBill.value) return null
+  return estimateMonthlyKwh(Number(calcBill.value))
+})
+
+const calcSystemSize = computed(() => {
+  if (!calcMonthlyKwh.value) return null
+  return estimateSystemSizeKw(calcMonthlyKwh.value)
+})
+
+const calcPanels = computed(() => {
+  if (!calcSystemSize.value) return null
+  return estimatePanels(calcSystemSize.value)
+})
+
+const calcYearlyKwh = computed(() => {
+  if (!calcMonthlyKwh.value) return null
+  return estimateYearlyKwh(calcMonthlyKwh.value)
+})
+
+const calcYearlySavings = computed(() => {
+  if (!calcBill.value) return null
+  return estimateYearlySavingsArs(Number(calcBill.value))
+})
+
+const hasCalcData = computed(
+  () => !!(calcMonthlyKwh.value && calcSystemSize.value),
+)
+
+const goToFormFromCalc = () => {
+  if (calcBill.value) {
+    form.currentBill = calcBill.value
+    // si vuelvo al form, lo dejo en el paso 3 para que ya vea el monto
+    step.value = Math.max(step.value, 3)
+  }
+  activeView.value = 'form'
+}
+
+// =======================
+//   RESET / MODAL / ACCIONES EXTRA
 // =======================
 
 const closeOnly = () => {
@@ -560,6 +786,41 @@ const resetFlow = () => {
   errorMessage.value = ''
   lastLead.value = null
   formRef.value?.resetValidation()
+  activeView.value = 'form'
+}
+
+// desde el modal, pasar directo a la vista de cálculo
+const openConsumptionCalc = () => {
+  showSuccess.value = false
+  activeView.value = 'calc'
+
+  // disparamos un evento por si WP quiere enganchar algo
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('solar-calculator:open-consumption-calc', {
+        detail: lastLead.value || null,
+      }),
+    )
+  }
+}
+
+const goToSolarGreen = () => {
+  // vista info interna
+  activeView.value = 'info'
+
+  if (typeof window !== 'undefined') {
+    // evento para integraciones
+    window.dispatchEvent(
+      new CustomEvent('solar-calculator:open-solar-green', {
+        detail: lastLead.value || null,
+      }),
+    )
+
+    // fallback: abrir la landing en otra pestaña
+    if (solarGreenUrl) {
+      window.open(solarGreenUrl, '_blank')
+    }
+  }
 }
 </script>
 
@@ -607,6 +868,36 @@ const resetFlow = () => {
   font-size: 0.83rem;
   margin: 0;
   color: #4f4f4f;
+}
+
+/* Tabs de vista */
+.view-tabs {
+  margin-top: 12px;
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #f4f7f5;
+}
+
+.view-tab {
+  flex: 1 1 0;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: transparent;
+  color: #30553b;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.view-tab.active {
+  background: #2a7c41;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
 .step-indicator {
@@ -657,6 +948,84 @@ const resetFlow = () => {
   margin-top: 10px;
   font-size: 0.8rem;
   color: #c62828;
+}
+
+/* VISTAS AUXILIARES (calc / info) */
+.aux-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.aux-header {
+  margin-bottom: 4px;
+}
+
+.aux-title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a5934;
+}
+
+.aux-subtitle {
+  margin: 0;
+  font-size: 0.83rem;
+  color: #4f4f4f;
+}
+
+.calc-summary {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #f5fbf7;
+  border: 1px solid rgba(42, 124, 65, 0.16);
+  font-size: 0.8rem;
+}
+
+.calc-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.calc-row:last-child {
+  margin-bottom: 0;
+}
+
+.calc-label {
+  color: #1a5934;
+  font-weight: 600;
+}
+
+.calc-value {
+  text-align: right;
+  color: #333;
+}
+
+.aux-actions {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aux-back-btn {
+  align-self: flex-start;
+  padding-left: 0;
+  text-transform: none;
+}
+
+.info-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 0.8rem;
+  color: #444;
+}
+
+.info-list li {
+  margin-bottom: 4px;
 }
 
 /* MODAL ÉXITO */
@@ -743,11 +1112,28 @@ const resetFlow = () => {
   text-align: center;
 }
 
+/* Acciones del modal en columna para que no se deformen */
 .success-actions {
   display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.success-actions .v-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.success-secondary-btn {
+  text-transform: none;
+}
+
+.success-link-btn {
+  text-transform: none;
+  font-size: 0.78rem;
+  color: #1a5934;
 }
 
 /* TABLET */
@@ -807,15 +1193,6 @@ const resetFlow = () => {
 
   .success-summary {
     font-size: 0.74rem;
-  }
-
-  .success-actions {
-    flex-direction: column-reverse;
-    align-items: stretch;
-  }
-
-  .success-actions .submit-btn {
-    width: 100%;
   }
 }
 </style>
