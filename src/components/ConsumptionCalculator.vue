@@ -709,36 +709,6 @@ const resetCalcForm = () => {
 }
 
 
-/* =============================================
-   FIX DEFINITIVO: Eliminar borde negro heredado
-   de Elementor / Tema sobre inputs y selects
-============================================= */
-
-:deep(input),
-:deep(input *),
-:deep(select),
-:deep(select *),
-:deep(.v-input),
-:deep(.v-input *),
-:deep(.v-field),
-:deep(.v-field *),
-:deep(.v-select),
-:deep(.v-select *),
-:deep(.v-input__control),
-:deep(.v-input__control *),
-:deep(.v-field__outline),
-:deep(.v-field__outline *),
-:deep(.v-field__overlay),
-:deep(.v-field__overlay *),
-:deep(.v-input__prepend),
-:deep(.v-input__append) {
-  border-top: none !important;
-  border-bottom: none !important;
-  border-left: none !important;
-  border-right: none !important;
-  box-shadow: none !important;
-}
-
 </style>
 
 
