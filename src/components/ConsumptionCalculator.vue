@@ -11,6 +11,7 @@
     </div>
 
     <v-form ref="formRef" class="calc-form">
+      <!-- DATOS -->
       <div class="calc-grid">
         <v-text-field
           v-model="form.fullName"
@@ -63,9 +64,9 @@
         />
       </div>
 
-      <!-- BLOQUE DE RESULTADOS -->
+      <!-- RESULTADOS EN VIVO -->
       <div class="calc-summary-wrapper">
-        <div class="calc-summary" v-if="canShowResults">
+        <div v-if="canShowResults" class="calc-summary">
           <div class="calc-row">
             <span class="calc-label">Consumo estimado</span>
             <span class="calc-value">
@@ -135,9 +136,9 @@
           variant="outlined"
           class="secondary-btn"
           color="primary"
-          @click="downloadReceipt"
+          @click="downloadReceiptPdf"
         >
-          Descargar comprobante de simulación
+          Descargar comprobante (PDF)
         </v-btn>
 
         <v-btn
@@ -164,6 +165,7 @@ import {
   estimateYearlySavingsArs,
 } from '../service/solarMath'
 
+// Normaliza "20.000", "40,000", "50000" => número
 function parseMoney(value) {
   if (value === null || value === undefined) return null
   const cleaned = String(value).replace(/\./g, '').replace(/,/g, '').trim()
@@ -210,7 +212,7 @@ const rules = {
   email: v => !v || /.+@.+\..+/.test(v) || 'Email inválido',
 }
 
-/* CÁLCULOS EN VIVO */
+/* === CÁLCULOS EN VIVO === */
 
 const billNumber = computed(() => parseMoney(form.currentBill))
 
@@ -257,7 +259,7 @@ const canShowResults = computed(() => {
   )
 })
 
-/* ENVÍO A CRM */
+/* === ENVÍO A CRM === */
 
 function buildLeadPayload() {
   const usage = usageMap.value[form.usage] || null
@@ -274,10 +276,10 @@ function buildLeadPayload() {
       purposeCode: null,
       purposeLabel: null,
       purposeDriver: null,
-      usageCode: usage?.value || null,
-      usageLabel: usage?.label || null,
-      segment: usage?.segment || null,
-      propertyType: usage?.segment || null,
+      usageCode: usage ? usage.value : null,
+      usageLabel: usage ? usage.label : null,
+      segment: usage ? usage.segment : null,
+      propertyType: usage ? usage.segment : null,
 
       monthlyBillArs: billNumber.value,
       estimatedMonthlyKwh: monthlyKwh.value || null,
@@ -370,66 +372,132 @@ const handleSubmit = async () => {
   }
 }
 
-/* DESCARGA DE COMPROBANTE */
+/* === COMPROBANTE PDF (ventana imprimible) === */
 
-const downloadReceipt = () => {
-  if (!canShowResults.value) return
+const downloadReceiptPdf = () => {
+  if (!canShowResults.value || typeof window === 'undefined') return
 
-  const lines = [
-    'Simulación solar - Grupo Alade',
-    '=================================',
-    '',
-    `Nombre: ${form.fullName}`,
-    `Teléfono: ${form.phone}`,
-    `Email: ${form.email}`,
-    `Uso: ${
-      usageMap.value[form.usage]?.label || 'Sin especificar'
-    }`,
-    '',
-    `Factura mensual informada: $${billNumber.value?.toLocaleString('es-AR')}`,
-    `Consumo estimado: ${
-      monthlyKwh.value
-        ? `${monthlyKwh.value.toLocaleString('es-AR')} kWh/mes`
-        : '—'
-    }`,
-    `Tamaño sugerido del sistema: ${
-      systemSizeKw.value ? `${systemSizeKw.value} kWp` : '—'
-    }`,
-    `Cantidad estimada de paneles: ${panels.value || '—'}`,
-    `Energía anual estimada: ${
-      yearlyKwh.value
-        ? `${yearlyKwh.value.toLocaleString('es-AR')} kWh/año`
-        : '—'
-    }`,
-    `Ahorro mensual estimado: ${
-      monthlySavings.value
-        ? `$${monthlySavings.value.toLocaleString('es-AR')}`
-        : '—'
-    }`,
-    `Ahorro anual estimado: ${
-      yearlySavings.value
-        ? `$${yearlySavings.value.toLocaleString('es-AR')}`
-        : '—'
-    }`,
-    '',
-    'Este comprobante es una estimación inicial. El diseño final del sistema',
-    'y la propuesta económica pueden variar según la evaluación técnica.',
-  ]
+  const usoObj = usageMap.value[form.usage]
+  const usoLabel = usoObj ? usoObj.label : 'Sin especificar'
+  const nowStr = new Date().toLocaleString('es-AR')
 
-  const blob = new Blob([lines.join('\n')], {
-    type: 'text/plain;charset=utf-8',
-  })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'simulacion-solar-grupo-alade.txt'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  // Filas opcionales
+  let extraRows = ''
+
+  if (yearlyKwh.value) {
+    extraRows +=
+      '<div class="row">' +
+      '<span class="label">Energía anual estimada</span>' +
+      '<span class="value">' +
+      yearlyKwh.value.toLocaleString('es-AR') +
+      ' kWh/año</span>' +
+      '</div>'
+  }
+
+  if (monthlySavings.value) {
+    extraRows +=
+      '<div class="row">' +
+      '<span class="label">Ahorro mensual estimado</span>' +
+      '<span class="value">$' +
+      monthlySavings.value.toLocaleString('es-AR') +
+      '</span>' +
+      '</div>'
+  }
+
+  if (yearlySavings.value) {
+    extraRows +=
+      '<div class="row">' +
+      '<span class="label">Ahorro anual estimado</span>' +
+      '<span class="value">$' +
+      yearlySavings.value.toLocaleString('es-AR') +
+      '</span>' +
+      '</div>'
+  }
+
+  const panelTxt = panels.value
+    ? systemSizeKw.value + ' kWp · ' + panels.value + ' paneles'
+    : systemSizeKw.value + ' kWp'
+
+  // HTML armado con concatenación clásica (sin backticks)
+  let html = ''
+
+  html += '<!doctype html>'
+  html += '<html lang="es">'
+  html += '<head>'
+  html += '<meta charset="utf-8" />'
+  html += '<title>Comprobante de simulación - Grupo Alade</title>'
+  html +=
+    '<style>' +
+    'body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;color:#222;}' +
+    '.box{max-width:700px;margin:0 auto;padding:24px 28px;border-radius:14px;border:1px solid #d4e3d9;background:#fff;}' +
+    'h1{font-size:20px;margin:0 0 6px;color:#1a5934;}' +
+    'h2{font-size:15px;margin:16px 0 6px;color:#1a5934;}' +
+    'p{font-size:13px;margin:3px 0;}' +
+    '.row{display:flex;justify-content:space-between;gap:12px;font-size:13px;margin:3px 0;}' +
+    '.label{font-weight:600;color:#1a5934;}' +
+    '.value{text-align:right;}' +
+    '.foot{margin-top:14px;font-size:11px;color:#666;}' +
+    'hr{border:none;border-top:1px dashed #c5d7c9;margin:10px 0 8px;}' +
+    '</style>'
+  html += '</head>'
+  html += '<body>'
+  html += '<div class="box">'
+  html += '<h1>Simulación solar - Grupo Alade</h1>'
+  html +=
+    '<p>Comprobante de simulación generado el ' + nowStr + '</p>'
+
+  html += '<h2>Datos de contacto</h2>'
+  html +=
+    '<div class="row"><span class="label">Nombre</span><span class="value">' +
+    form.fullName +
+    '</span></div>'
+  html +=
+    '<div class="row"><span class="label">Teléfono</span><span class="value">' +
+    form.phone +
+    '</span></div>'
+  html +=
+    '<div class="row"><span class="label">Email</span><span class="value">' +
+    form.email +
+    '</span></div>'
+  html +=
+    '<div class="row"><span class="label">Uso declarado</span><span class="value">' +
+    usoLabel +
+    '</span></div>'
+
+  html += '<h2>Datos de consumo</h2>'
+  html +=
+    '<div class="row"><span class="label">Factura mensual informada</span><span class="value">$' +
+    billNumber.value.toLocaleString('es-AR') +
+    '</span></div>'
+  html +=
+    '<div class="row"><span class="label">Consumo estimado</span><span class="value">' +
+    monthlyKwh.value.toLocaleString('es-AR') +
+    ' kWh/mes</span></div>'
+  html +=
+    '<div class="row"><span class="label">Tamaño sugerido del sistema</span><span class="value">' +
+    panelTxt +
+    '</span></div>'
+
+  html += extraRows
+
+  html += '<hr />'
+  html +=
+    '<p class="foot">Este comprobante es una estimación inicial. El diseño definitivo del sistema y la propuesta económica pueden variar según la evaluación técnica del lugar, la calidad de la red eléctrica y otras condiciones.</p>'
+  html += '</div>'
+  html +=
+    '<script>window.onload=function(){window.print();};</' +
+    'script>'
+  html += '</body></html>'
+
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.document.open()
+  win.document.write(html)
+  win.document.close()
 }
 
-/* RESET DEL FLUJO */
+
+/* === RESET DEL FLUJO === */
 
 const resetCalcForm = () => {
   Object.assign(form, createInitialForm())
@@ -438,6 +506,7 @@ const resetCalcForm = () => {
   successMessage.value = ''
   hasSubmitted.value = false
 }
+
 </script>
 
 <style scoped>
@@ -537,17 +606,18 @@ const resetCalcForm = () => {
   margin-top: 6px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .submit-btn {
   font-weight: 600;
   text-transform: none;
+  min-height: 30px;
 }
 
 .secondary-btn {
   text-transform: none;
-  font-size: 0.83rem;
+  font-size: 0.8rem;
 }
 
 /* Responsive: dos columnas en desktop */

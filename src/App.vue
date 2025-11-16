@@ -37,7 +37,7 @@
             v-show="activeView === 'form'"
           />
 
-          <!-- VISTA CALCULADORA DE CONSUMO + AHORRO -->
+          <!-- VISTA CALCULADORA DE CONSUMO -->
           <ConsumptionCalculator
             v-show="activeView === 'calc'"
           />
@@ -136,7 +136,7 @@ const goToMoreInfo = () => {
   flex: 1 1 0;
   border: none;
   border-radius: 999px;
-  padding: 6px 8px;
+  padding: 5px 8px;
   font-size: 0.75rem;
   font-weight: 600;
   background: transparent;
@@ -194,7 +194,7 @@ const goToMoreInfo = () => {
 }
 </style>
 
-<!-- Estilos globales para blindar contra Elementor -->
+<!-- Estilos globales para blindar contra Elementor y refinar botones -->
 <style>
 #solar-calculator .solar-app,
 #solar-calculator .solar-app .v-application__wrap,
@@ -210,22 +210,22 @@ const goToMoreInfo = () => {
   box-sizing: border-box !important;
 }
 
-/* Botones Vuetify reseteados */
+/* Botones Vuetify: más delicados */
 #solar-calculator .v-btn,
 #solar-calculator .v-btn:link,
 #solar-calculator .v-btn:visited {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 8px 18px !important;
-  min-height: 34px !important;
+  padding: 6px 14px !important;
+  min-height: 30px !important;
   height: auto !important;
   border-radius: 999px !important;
   text-decoration: none !important;
   text-transform: none !important;
   letter-spacing: 0 !important;
   font-weight: 600 !important;
-  font-size: 0.85rem !important;
+  font-size: 0.82rem !important;
   background-image: none !important;
 }
 
@@ -238,7 +238,7 @@ const goToMoreInfo = () => {
 #solar-calculator button {
   text-decoration: none !important;
   text-transform: none !important;
-  font-size: 0.85rem !important;
+  font-size: 0.82rem !important;
 }
 
 /* Inputs / selects Vuetify */

@@ -211,7 +211,7 @@
             variant="flat"
             @click="handleReset"
           >
-            Hacer otra simulación
+            Nueva simulación
           </v-btn>
 
           <v-btn
@@ -231,7 +231,7 @@
 import { defineEmits } from 'vue'
 import { useSolarLead } from '../composables/useSolarLead'
 
-const emit = defineEmits(['open-calc', 'open-solar-green'])
+defineEmits(['open-calc', 'open-solar-green'])
 
 const {
   step,
@@ -246,7 +246,6 @@ const {
   isSubmitting,
   errorMessage,
   showSuccess,
-  lastLead,
   summaryLocation,
   summaryUsage,
   summaryBill,
@@ -262,7 +261,6 @@ const {
 const handleReset = () => {
   resetFlow()
 }
-
 </script>
 
 <style scoped>
@@ -312,10 +310,11 @@ const handleReset = () => {
 }
 
 .submit-btn {
-  min-width: 140px;
+  min-width: 120px;
   font-weight: 600;
   color: #ffffff;
   text-transform: none;
+  font-size: 0.82rem;
 }
 
 .error-message {
@@ -327,8 +326,9 @@ const handleReset = () => {
 /* MODAL ÉXITO */
 .success-card {
   padding: 18px 18px 16px;
-  border-radius: 16px;
+  border-radius: 18px;
   background: #ffffff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
 }
 
 .success-icon-wrap {
@@ -359,7 +359,7 @@ const handleReset = () => {
 
 .success-title {
   margin: 4px 0 6px;
-  font-size: 1.12rem;
+  font-size: 1.05rem;
   font-weight: 800;
   text-align: center;
   color: #1a5934;
@@ -367,7 +367,7 @@ const handleReset = () => {
 
 .success-copy {
   margin: 0 auto 12px;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   color: #444;
   text-align: center;
 }
@@ -404,27 +404,31 @@ const handleReset = () => {
 
 .success-footnote {
   margin: 4px 0 8px;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   color: #666;
   text-align: center;
 }
 
+/* Acciones del modal: botones más livianos */
 .success-actions {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .success-btn {
   width: 100%;
   justify-content: center;
-  font-size: 0.85rem !important;
+  font-size: 0.8rem !important;
   font-weight: 600 !important;
   text-transform: none !important;
-  min-height: 34px !important;
+  min-height: 30px !important;
   border-radius: 999px !important;
+}
+
+.success-btn--primary {
+  box-shadow: 0 2px 6px rgba(42, 124, 65, 0.25);
 }
 
 .success-btn--ghost {
