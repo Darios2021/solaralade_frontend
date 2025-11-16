@@ -409,9 +409,9 @@ function scrollToInfo() {
   margin: 0 auto;
 }
 
-/* Sacamos cualquier fondo/borde heredado de WP */
-:deep(.faq-wrapper * ) {
-  box-shadow: none;
+/* Sacamos cualquier sombra heredada de WP */
+:deep(.faq-wrapper *) {
+  box-shadow: none !important;
 }
 
 /* panel base */
@@ -419,7 +419,7 @@ function scrollToInfo() {
   background-color: #ffffff !important;
   border-radius: 12px !important;
   margin-bottom: 10px !important;
-  border: 1px solid #e0e0e0 !important;
+  border: 1px solid #1a5634 !important; /* 🔥 borde VERDE definitivo */
 }
 
 /* título del panel */
@@ -429,6 +429,7 @@ function scrollToInfo() {
   font-weight: 500 !important;
   font-size: 0.98rem !important;
   min-height: 52px !important;
+  border: none !important;
 }
 
 /* overlay hover de Vuetify */
@@ -509,3 +510,4 @@ function scrollToInfo() {
   box-shadow: none !important;
 }
 </style>
+
