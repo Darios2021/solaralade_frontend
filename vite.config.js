@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vuetify from 'vite-plugin-vuetify'
 
-// Build única → una entrada por vez
 export default defineConfig(({ mode }) => {
   const isCalculator = mode === 'calculator'
   const isGreen = mode === 'green'
@@ -15,7 +14,8 @@ export default defineConfig(({ mode }) => {
 
     build: {
       outDir: 'dist',
-      emptyOutDir: false, // ⬅ no borra los otros bundles
+      emptyOutDir: false,
+
       lib: {
         entry: isCalculator
           ? 'src/apps/calculatorApp.js'
@@ -26,13 +26,14 @@ export default defineConfig(({ mode }) => {
         formats: ['iife'],
 
         fileName: () =>
-          isCalculator ? 'solar-calculator.js' : 'solar-green.js',
+          isCalculator ? 'solar-calculator.js' : 'solar-green.js'
       },
+
       rollupOptions: {
         output: {
-          assetFileNames: 'assets/[name].[ext]',
-        },
-      },
-    },
+          assetFileNames: 'assets/[name].[ext]'
+        }
+      }
+    }
   }
 })
