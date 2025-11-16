@@ -9,20 +9,30 @@ export default defineConfig({
       autoImport: true,
     }),
   ],
+
   build: {
     outDir: 'dist',
-    // Modo librería: genera UN solo JS fijo: solar-calculator.js
-    lib: {
-      entry: 'src/main.js',
-      name: 'SolarCalculator',
-      formats: ['iife'],
-      fileName: () => 'solar-calculator.js',
-    },
+
     rollupOptions: {
+      input: {
+        // ⚡ App principal (lead form + calculadora)
+        calculator: 'src/main.js',
+
+        // ⚡ Nueva Landing Alade Green
+        solar_green: 'src/mountSolarGreen.js',
+      },
+
       output: {
+        // Cada entrada produce su propio JS
+        entryFileNames: (chunk) => {
+          if (chunk.name === 'calculator') return 'solar-calculator.js'
+          if (chunk.name === 'solar_green') return 'solar-green.js'
+          return '[name].js'
+        },
         assetFileNames: 'assets/[name].[ext]',
       },
     },
   },
+
   base: '/',
 })
