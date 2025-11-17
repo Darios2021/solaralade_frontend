@@ -256,6 +256,9 @@
         </v-container>
       </section>
     </v-main>
+
+    <!-- 🔹 CHATBOT INDEPENDIENTE, FLOTANTE -->
+    <ChatbotWidget />
   </v-app>
 </template>
 
@@ -263,6 +266,7 @@
 import { ref } from 'vue'
 import SolarLeadForm from './components/SolarLeadForm.vue'
 import ConsumptionCalculator from './components/ConsumptionCalculator.vue'
+import ChatbotWidget from './components/ChatbotWidget.vue'
 
 const activeView = ref('form')
 const infoSection = ref(null)
@@ -510,4 +514,3 @@ function scrollToInfo() {
   box-shadow: none !important;
 }
 </style>
-
