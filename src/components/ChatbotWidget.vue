@@ -373,7 +373,7 @@ onMounted(() => {
 }
 
 .chatbot-slide-enter-from,
-.chatbot-slide-leave-to {
+chatbot-slide-leave-to {
   opacity: 0;
   transform: translateY(10px);
 }
@@ -390,16 +390,22 @@ onMounted(() => {
 
 /* RESPONSIVE */
 @media (max-width: 600px) {
-  .chatbot-card {
-    width: calc(100vw - 24px);
-    right: 0;
-    left: 0;
-    margin: 0 auto;
-  }
-
+  /* el botón flotante queda abajo a la derecha como ahora */
   .chatbot-root {
     right: 12px;
     bottom: 12px;
+  }
+
+  /* el panel se centra y usa casi todo el ancho */
+  .chatbot-card {
+    position: fixed;
+    bottom: 72px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100vw - 24px);
+    max-width: 420px;
+    right: auto;
+    margin: 0 auto;
   }
 }
 </style>
