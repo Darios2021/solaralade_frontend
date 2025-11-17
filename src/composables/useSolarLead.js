@@ -8,11 +8,12 @@ import {
   estimateYearlyKwh,
   estimateYearlySavingsArs,
 } from '../service/solarMath'
+import { getClientMeta, getUtmParams } from '../service/clientMeta'
 
 /**
  * Normaliza un importe tipo "20.000", "40,000", "50000" a número.
  */
-function parseMoney(value) {
+function parseMoney (value) {
   if (value === null || value === undefined) return null
   const cleaned = String(value).replace(/\./g, '').replace(/,/g, '').trim()
   if (!cleaned) return null
@@ -20,7 +21,7 @@ function parseMoney(value) {
   return Number.isNaN(n) ? null : n
 }
 
-export function useSolarLead() {
+export function useSolarLead () {
   console.log('[solar-calculator] useSolarLead inicializado')
 
   const step = ref(1)
@@ -45,6 +46,41 @@ export function useSolarLead() {
   })
 
   const form = reactive(createInitialForm())
+
+  // ============================
+  // MÉTRICAS DE COMPORTAMIENTO
+  // ============================
+  const flowStartedAt = Date.now()
+  const stepDurations = ref({}) // {1:ms,2:ms,...}
+  let currentStepStartedAt = Date.now()
+  const errorCount = ref(0)
+  const scrollMaxPercent = ref(0)
+
+  function trackStepDuration (prevStep) {
+    const now = Date.now()
+    const delta = now - currentStepStartedAt
+    if (!stepDurations.value[prevStep]) {
+      stepDurations.value[prevStep] = 0
+    }
+    stepDurations.value[prevStep] += delta
+    currentStepStartedAt = now
+  }
+
+  function onScroll () {
+    try {
+      const docEl = document.documentElement || document.body
+      const scrollTop = docEl.scrollTop || document.body.scrollTop || 0
+      const scrollHeight =
+        (docEl.scrollHeight || 0) - (docEl.clientHeight || 0)
+      if (scrollHeight <= 0) return
+      const percent = (scrollTop / scrollHeight) * 100
+      if (percent > scrollMaxPercent.value) {
+        scrollMaxPercent.value = Math.round(percent)
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   // OPCIONES
   const provinces = [
@@ -99,7 +135,12 @@ export function useSolarLead() {
     errorMessage.value = ''
     if (!formRef.value) return
     const { valid } = await formRef.value.validate()
-    if (valid && step.value < totalSteps) {
+    if (!valid) {
+      errorCount.value++
+      return
+    }
+    if (step.value < totalSteps) {
+      trackStepDuration(step.value)
       step.value++
       formRef.value.resetValidation()
     }
@@ -108,13 +149,14 @@ export function useSolarLead() {
   const goPrev = () => {
     errorMessage.value = ''
     if (step.value > 1) {
+      trackStepDuration(step.value)
       step.value--
       formRef.value?.resetValidation()
     }
   }
 
   // PRIORIDAD / CRM
-  function estimatePriority(purposeValue, monthlyBillRaw) {
+  function estimatePriority (purposeValue, monthlyBillRaw) {
     const bill = parseMoney(monthlyBillRaw) || 0
     const driver = purposeMap.value[purposeValue]?.driver
 
@@ -125,7 +167,7 @@ export function useSolarLead() {
     return 'A evaluar'
   }
 
-  function mapPropertyType(usageValue) {
+  function mapPropertyType (usageValue) {
     switch (usageValue) {
       case 'home':
         return 'Hogar'
@@ -142,7 +184,7 @@ export function useSolarLead() {
     }
   }
 
-  function mapCrmScore(priorityLabel) {
+  function mapCrmScore (priorityLabel) {
     const k = String(priorityLabel || '').toLowerCase()
     if (k.includes('muy alta')) return 90
     if (k.includes('alta')) return 75
@@ -151,7 +193,7 @@ export function useSolarLead() {
     return 40
   }
 
-  function buildCrmTags(usage, purpose, segment) {
+  function buildCrmTags (usage, purpose, segment) {
     const tags = ['web', 'simulador-solar']
     if (usage?.value) tags.push(`uso:${usage.value}`)
     if (segment) tags.push(`segmento:${segment}`)
@@ -159,8 +201,8 @@ export function useSolarLead() {
     return tags.join(', ')
   }
 
-  // PAYLOAD
-  function buildLeadPayload() {
+  // PAYLOAD BASE (sin meta)
+  function buildLeadPayload (meta) {
     const province = provinces.find(p => p.value === form.province) || null
     const country = countries.find(c => c.value === form.country) || null
     const purpose = purposeMap.value[form.purpose] || null
@@ -180,6 +222,13 @@ export function useSolarLead() {
     const crmStatus = 'nuevo'
     const crmScore = mapCrmScore(priority)
     const tags = buildCrmTags(usage, purpose, usage?.segment)
+
+    // Meta por defecto si no viene desde handleSubmit (fallback)
+    const defaultMeta = {
+      createdAt: new Date().toISOString(),
+      sourceUrl: typeof window !== 'undefined' ? window.location.href : null,
+      sourceTag: 'web-grupoalade-simulador-solar',
+    }
 
     return {
       location: {
@@ -224,11 +273,7 @@ export function useSolarLead() {
         internalNotes: null,
         tags,
       },
-      meta: {
-        createdAt: new Date().toISOString(),
-        sourceUrl: typeof window !== 'undefined' ? window.location.href : null,
-        sourceTag: 'web-grupoalade-simulador-solar',
-      },
+      meta: meta || defaultMeta,
     }
   }
 
@@ -243,14 +288,49 @@ export function useSolarLead() {
 
     if (!formRef.value) return
     const { valid } = await formRef.value.validate()
-    if (!valid) return
+    if (!valid) {
+      errorCount.value++
+      return
+    }
 
-    const payload = buildLeadPayload()
     isSubmitting.value = true
 
-    console.log('[solar-calculator] Enviando lead simulador:', payload)
-
     try {
+      // ====== Métricas de comportamiento para este envío ======
+      const now = Date.now()
+      trackStepDuration(step.value) // último paso
+      const behavior = {
+        flowStartedAtIso: new Date(flowStartedAt).toISOString(),
+        flowFinishedAtIso: new Date(now).toISOString(),
+        totalDurationMs: now - flowStartedAt,
+        stepDurationsMs: stepDurations.value,
+        scrollMaxPercent: scrollMaxPercent.value,
+        totalValidationErrors: errorCount.value,
+        finalStep: step.value,
+      }
+
+      const utm = getUtmParams()
+      const sourceUrl =
+        typeof window !== 'undefined' ? window.location.href : null
+      const sourceTag =
+        (typeof window !== 'undefined' &&
+          window.SOLAR_CALCULATOR_SOURCE_TAG) ||
+        'web-grupoalade-simulador-solar'
+
+      const meta = {
+        createdAt: new Date().toISOString(),
+        sourceUrl,
+        sourceTag,
+        client: getClientMeta({
+          ...behavior,
+          utm,
+        }),
+      }
+
+      const payload = buildLeadPayload(meta)
+
+      console.log('[solar-calculator] Enviando lead simulador:', payload)
+
       const data = await postLead(payload)
 
       if (!data.ok) {
@@ -333,9 +413,15 @@ export function useSolarLead() {
     lastLead.value = null
     hasSubmitted.value = false
     formRef.value?.resetValidation()
+
+    // reset métricas
+    stepDurations.value = {}
+    scrollMaxPercent.value = 0
+    errorCount.value = 0
+    currentStepStartedAt = Date.now()
   }
 
-  // Integración con calculadora (si se usa)
+  // Integración con calculadora (si se usa) + scroll listener
   let removeListener = null
 
   onMounted(() => {
@@ -353,8 +439,12 @@ export function useSolarLead() {
     }
 
     window.addEventListener('solar-calculator:use-bill', handler)
-    removeListener = () =>
+    window.addEventListener('scroll', onScroll, { passive: true })
+
+    removeListener = () => {
       window.removeEventListener('solar-calculator:use-bill', handler)
+      window.removeEventListener('scroll', onScroll)
+    }
   })
 
   onBeforeUnmount(() => {
