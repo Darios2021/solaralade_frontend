@@ -5,11 +5,10 @@ import vuetify from 'vite-plugin-vuetify'
 
 export default defineConfig(({ mode }) => {
   const ENTRIES = {
-    calculator: 'src/main.js',          // bundle viejo: sólo formulario/consumo
-    green: 'src/mountSolarGreen.js',    // NUEVO: landing + chatbot
+    calculator: 'src/main.js',          // BUNDLE VIEJO: sólo formulario+calculador
+    green: 'src/mountSolarGreen.js',    // BUNDLE NUEVO: landing + chatbot
   }
 
-  // flag para saber si estamos construyendo el modo green
   const isGreen = mode === 'green'
 
   return {
@@ -17,13 +16,10 @@ export default defineConfig(({ mode }) => {
 
     build: {
       outDir: 'dist',
-      // no vaciamos el directorio para poder tener ambos bundles conviviendo
       emptyOutDir: false,
 
       lib: {
-        // entry según el mode
         entry: ENTRIES[mode] || 'src/main.js',
-        // nombre global del bundle (window.SolarGreenLanding o window.SolarCalculator)
         name: isGreen ? 'SolarGreenLanding' : 'SolarCalculator',
         formats: ['iife'],
         fileName: () => (isGreen ? 'solar-green.js' : 'solar-calculator.js'),
@@ -31,7 +27,6 @@ export default defineConfig(({ mode }) => {
 
       rollupOptions: {
         output: {
-          // 👉 CSS separado por modo para que no se pisen
           assetFileNames: (assetInfo) => {
             if (assetInfo.name === 'style.css') {
               return isGreen

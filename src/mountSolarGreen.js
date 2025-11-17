@@ -1,19 +1,29 @@
 // src/mountSolarGreen.js
 import { createApp } from 'vue'
-import { createVuetify } from 'vuetify'
-import 'vuetify/styles'
-import '@mdi/font/css/materialdesignicons.css'
-
 import SolarGreenApp from './SolarGreenApp.vue'
 
-// Tema base (podés ajustarlo)
+// Vuetify
+import 'vuetify/styles'
+import { createVuetify } from 'vuetify'
+import * as components from 'vuetify/components'
+import * as directives from 'vuetify/directives'
+import '@mdi/font/css/materialdesignicons.css'
+
+// Theme ALADE Green
 const vuetify = createVuetify({
+  components,
+  directives,
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: 'greenLight',
     themes: {
-      light: {
+      greenLight: {
+        dark: false,
         colors: {
-          primary: '#1a5634',
+          primary: '#1a5634', // 💚 verde principal
+          secondary: '#0f3a23',
+          background: '#f5f5f5',
+          surface: '#ffffff',
+          'on-primary': '#ffffff',
         },
       },
     },
@@ -21,28 +31,44 @@ const vuetify = createVuetify({
 })
 
 /**
- * Monta la landing ALADE Green + formulario + chatbot
- * @param {string|Element} selector
+ * Monta la landing + formulario + chatbot
+ * target puede ser '#solar-green' o 'solar-green'
  */
-export function mount (selector = '#solar-calculator') {
-  const el = typeof selector === 'string'
-    ? document.querySelector(selector)
-    : selector
+export function mountSolarGreen(target = '#solar-green') {
+  let selector = target
+
+  if (typeof selector === 'string') {
+    if (!selector.startsWith('#')) selector = '#' + selector
+  }
+
+  const el =
+    typeof selector === 'string' ? document.querySelector(selector) : selector
 
   if (!el) {
     console.warn('[SolarGreenLanding] No se encontró el contenedor:', selector)
     return
   }
 
+  // evitar doble montaje (por si Elementor re-ejecuta scripts)
+  if (el.dataset.sgMounted === '1') {
+    console.log('[solar-green] Ya estaba montado en', selector)
+    return
+  }
+
+  console.log('[solar-green] Montando landing en', selector)
+
   const app = createApp(SolarGreenApp)
   app.use(vuetify)
   app.mount(el)
 
+  el.dataset.sgMounted = '1'
   return app
 }
 
-// Para uso directo desde el navegador (global)
+// Exponer en window para Elementor / páginas externas
 if (typeof window !== 'undefined') {
   window.SolarGreenLanding = window.SolarGreenLanding || {}
-  window.SolarGreenLanding.mount = mount
+  window.SolarGreenLanding.mount = mountSolarGreen
 }
+
+export default { mountSolarGreen }

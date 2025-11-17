@@ -19,19 +19,19 @@
       <v-card
         v-if="isOpen"
         class="chatbot-card"
-        elevation="10"
+        elevation="12"
       >
         <!-- HEADER -->
-        <v-card-title class="py-2 px-3 d-flex align-center justify-space-between">
+        <v-card-title class="py-2 px-3 d-flex align-center justify-space-between chatbot-header">
           <div class="d-flex align-center">
-            <v-avatar size="32" class="mr-3">
+            <v-avatar size="32" class="mr-3 chatbot-avatar">
               <v-icon>mdi-robot</v-icon>
             </v-avatar>
             <div>
               <div class="text-subtitle-1 font-weight-bold">
                 Asistente Solar
               </div>
-              <div class="text-caption d-flex align-center">
+              <div class="text-caption d-flex align-center chatbot-status">
                 <span class="status-dot mr-1" />
                 En línea
               </div>
@@ -40,8 +40,9 @@
 
           <v-btn
             icon
-            variant="text"
+            variant="flat"
             size="small"
+            class="chatbot-close-btn"
             @click="toggleOpen"
           >
             <v-icon>mdi-close</v-icon>
@@ -56,26 +57,31 @@
             ref="messagesContainer"
             class="chatbot-messages"
           >
-            <div
-              v-for="msg in messages"
-              :key="msg.id"
-              class="chatbot-message-row"
-              :class="{
-                'chatbot-message-row--user': msg.from === 'user',
-                'chatbot-message-row--bot': msg.from === 'bot'
-              }"
+            <TransitionGroup
+              name="chatbot-msg"
+              tag="div"
             >
-              <div class="chatbot-message-bubble">
-                <div class="chatbot-message-text">
-                  {{ msg.text }}
-                </div>
-                <div class="chatbot-message-meta">
-                  <span>{{ formatTime(msg.ts) }}</span>
-                  <span v-if="msg.from === 'bot'"> · Asistente</span>
-                  <span v-else> · Tú</span>
+              <div
+                v-for="msg in messages"
+                :key="msg.id"
+                class="chatbot-message-row"
+                :class="{
+                  'chatbot-message-row--user': msg.from === 'user',
+                  'chatbot-message-row--bot': msg.from === 'bot'
+                }"
+              >
+                <div class="chatbot-message-bubble">
+                  <div class="chatbot-message-text">
+                    {{ msg.text }}
+                  </div>
+                  <div class="chatbot-message-meta">
+                    <span>{{ formatTime(msg.ts) }}</span>
+                    <span v-if="msg.from === 'bot'"> · Asistente</span>
+                    <span v-else> · Tú</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </TransitionGroup>
           </div>
         </v-card-text>
 
@@ -89,15 +95,18 @@
             density="comfortable"
             placeholder="Escribí tu consulta..."
             hide-details
-            class="flex-grow-1 mr-2"
+            class="flex-grow-1 mr-2 chatbot-input"
             @keyup.enter="handleSend"
           >
             <template #prepend-inner>
-              <v-icon size="18">mdi-message-text-outline</v-icon>
+              <v-icon size="18" class="chatbot-input-icon">
+                mdi-message-text-outline
+              </v-icon>
             </template>
           </v-text-field>
 
           <v-btn
+            class="chatbot-send-btn"
             color="primary"
             variant="flat"
             :disabled="!canSend"
@@ -105,7 +114,7 @@
             icon
             @click="handleSend"
           >
-            <v-icon>mdi-send</v-icon>
+            <v-icon class="chatbot-send-icon">mdi-send</v-icon>
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -175,7 +184,7 @@ async function handleSend() {
       'Gracias por tu consulta. En breve un asesor del equipo solar se pondrá en contacto o te responderé por aquí. ' +
       'Si querés, contame en qué ciudad estás y el valor aproximado de tu factura de luz.'
 
-    await new Promise(resolve => setTimeout(resolve, 600))
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     messages.value.push({
       id: Date.now() + '-bot',
@@ -216,6 +225,8 @@ onMounted(() => {
 /* BOTÓN FLOTANTE */
 .chatbot-fab {
   border-radius: 999px;
+  padding-inline: 16px;
+  font-weight: 600;
 }
 
 /* PANEL */
@@ -223,19 +234,47 @@ onMounted(() => {
   position: absolute;
   bottom: 64px;
   right: 0;
-  width: 340px;
-  max-height: 520px;
+  width: 360px;
+  max-height: 540px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 18px;
 }
 
 /* HEADER */
+.chatbot-header {
+  background: linear-gradient(135deg, #1a5634, #227346);
+  color: #ffffff;
+}
+
+.chatbot-avatar {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.chatbot-status {
+  opacity: 0.9;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background-color: #4caf50;
+}
+
+/* BOTÓN CERRAR */
+.chatbot-close-btn {
+  border-radius: 999px;
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #ffffff;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.chatbot-close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.18);
+  transform: scale(1.05);
 }
 
 /* MENSAJES */
@@ -265,10 +304,11 @@ onMounted(() => {
 
 .chatbot-message-bubble {
   max-width: 80%;
-  border-radius: 14px;
-  padding: 8px 10px;
+  border-radius: 16px;
+  padding: 8px 11px;
   font-size: 0.9rem;
-  line-height: 1.3;
+  line-height: 1.35;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
 .chatbot-message-row--bot .chatbot-message-bubble {
@@ -277,26 +317,59 @@ onMounted(() => {
 }
 
 .chatbot-message-row--user .chatbot-message-bubble {
-  background-color: #1976d2;
-  color: white;
+  background-color: #1a73e8;
+  color: #ffffff;
   border-bottom-right-radius: 4px;
 }
 
 .chatbot-message-meta {
   margin-top: 4px;
   font-size: 0.7rem;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 /* INPUT */
 .chatbot-input-wrapper {
   border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background-color: #fafafa;
 }
 
-/* ANIMACIONES */
+.chatbot-input :deep(.v-field) {
+  border-radius: 999px !important;
+}
+
+.chatbot-input-icon {
+  opacity: 0.6;
+}
+
+/* BOTÓN ENVIAR */
+.chatbot-send-btn {
+  border-radius: 999px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  box-shadow: 0 3px 8px rgba(26, 115, 232, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.chatbot-send-btn:disabled {
+  opacity: 0.4;
+  box-shadow: none;
+}
+
+.chatbot-send-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+}
+
+.chatbot-send-icon {
+  transform: translateX(1px);
+}
+
+/* ANIMACIONES PANEL */
 .chatbot-slide-enter-active,
 .chatbot-slide-leave-active {
-  transition: all 0.2s ease-out;
+  transition: all 0.18s ease-out;
 }
 
 .chatbot-slide-enter-from,
@@ -305,13 +378,28 @@ onMounted(() => {
   transform: translateY(10px);
 }
 
+/* ANIMACIONES MENSAJES */
+.chatbot-msg-enter-active {
+  transition: all 0.18s ease-out;
+}
+
+.chatbot-msg-enter-from {
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+}
+
 /* RESPONSIVE */
 @media (max-width: 600px) {
   .chatbot-card {
-    width: calc(100vw - 32px);
+    width: calc(100vw - 24px);
     right: 0;
     left: 0;
     margin: 0 auto;
+  }
+
+  .chatbot-root {
+    right: 12px;
+    bottom: 12px;
   }
 }
 </style>
