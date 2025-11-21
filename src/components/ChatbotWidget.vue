@@ -124,11 +124,15 @@
 
 <script setup>
 import { ref, onMounted, nextTick, computed } from 'vue'
+import { createChatSession, sendChatMessage } from '../service/chatClient'
+
+const STORAGE_KEY = 'solar_chat_session_id'
 
 const isOpen = ref(false)
 const newMessage = ref('')
 const isSending = ref(false)
 const messages = ref([])
+const sessionId = ref(null)
 
 const messagesContainer = ref(null)
 
@@ -158,18 +162,59 @@ const canSend = computed(
   () => newMessage.value.trim().length > 0 && !isSending.value,
 )
 
+// ========================
+//  SESIÓN DE CHAT
+// ========================
+async function ensureSession() {
+  if (sessionId.value) return sessionId.value
+
+  try {
+    const stored =
+      typeof window !== 'undefined'
+        ? window.localStorage?.getItem(STORAGE_KEY)
+        : null
+
+    if (stored) {
+      sessionId.value = parseInt(stored, 10) || null
+    }
+  } catch {
+    // ignore
+  }
+
+  if (sessionId.value) return sessionId.value
+
+  const session = await createChatSession()
+  sessionId.value = session.id
+
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage?.setItem(STORAGE_KEY, String(session.id))
+    }
+  } catch {
+    // ignore
+  }
+
+  return session.id
+}
+
+// ========================
+//  ENVÍO DE MENSAJES
+// ========================
 async function handleSend() {
   if (!canSend.value) return
 
   const text = newMessage.value.trim()
   if (!text) return
 
-  // mensaje del usuario
+  // mensaje del usuario en UI
+  const localId = Date.now() + '-user'
+  const now = new Date()
+
   messages.value.push({
-    id: Date.now() + '-user',
+    id: localId,
     from: 'user',
     text,
-    ts: new Date(),
+    ts: now,
   })
 
   newMessage.value = ''
@@ -179,17 +224,24 @@ async function handleSend() {
   isSending.value = true
 
   try {
-    // FUTURO: acá llamaremos a tu backend (API chat)
-    const autoReply =
-      'Gracias por tu consulta. En breve un asesor del equipo solar se pondrá en contacto o te responderé por aquí. ' +
-      'Si querés, contame en qué ciudad estás y el valor aproximado de tu factura de luz.'
+    const id = await ensureSession()
 
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // Enviamos al backend (para que aparezca en el CRM)
+    await sendChatMessage(id, text, 'user', {
+      uiId: localId,
+    })
 
+    // Acá podrías, más adelante, procesar respuestas automáticas del bot.
+  } catch (err) {
+    console.error('[Chatbot] Error enviando mensaje', err)
+
+    // Mensaje de error al usuario
     messages.value.push({
-      id: Date.now() + '-bot',
+      id: Date.now() + '-error',
       from: 'bot',
-      text: autoReply,
+      text:
+        'No pude enviar tu mensaje en este momento. ' +
+        'Por favor intentá de nuevo en unos segundos.',
       ts: new Date(),
     })
 
@@ -201,6 +253,7 @@ async function handleSend() {
 }
 
 onMounted(() => {
+  // Mensaje de bienvenida
   messages.value.push({
     id: 'welcome-bot',
     from: 'bot',
@@ -211,6 +264,18 @@ onMounted(() => {
   })
 
   nextTick(scrollToBottom)
+
+  // Intentar recuperar sesión previa (si existiera)
+  try {
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage?.getItem(STORAGE_KEY)
+      if (stored) {
+        sessionId.value = parseInt(stored, 10) || null
+      }
+    }
+  } catch {
+    // ignore
+  }
 })
 </script>
 
@@ -390,13 +455,11 @@ chatbot-slide-leave-to {
 
 /* RESPONSIVE */
 @media (max-width: 600px) {
-  /* el botón flotante queda abajo a la derecha como ahora */
   .chatbot-root {
     right: 12px;
     bottom: 12px;
   }
 
-  /* el panel se centra y usa casi todo el ancho */
   .chatbot-card {
     position: fixed;
     bottom: 72px;
