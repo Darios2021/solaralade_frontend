@@ -82,6 +82,13 @@
                 </div>
               </div>
             </TransitionGroup>
+
+            <div
+              v-if="isLoadingHistory && !messages.length"
+              class="text-caption text-medium-emphasis pa-3"
+            >
+              Cargando conversación…
+            </div>
           </div>
         </v-card-text>
 
@@ -123,26 +130,38 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue'
-import { createChatSession, sendChatMessage } from '../service/chatClient'
+import {
+  ref,
+  onMounted,
+  onBeforeUnmount,
+  nextTick,
+  computed,
+} from 'vue'
 
-const STORAGE_KEY = 'solar_chat_session_id'
+import { getClientMeta } from '../service/clientMeta'
+import {
+  createChatSession,
+  sendChatMessage,
+  listSessionMessages,
+} from '../service/chatClient'
 
+// ---------- state básico ----------
 const isOpen = ref(false)
 const newMessage = ref('')
 const isSending = ref(false)
+const isLoadingHistory = ref(false)
+
 const messages = ref([])
+
+// id de sesión en backend
 const sessionId = ref(null)
+
+// polling de historial (para ver respuestas del CRM)
+const pollingTimer = ref(null)
 
 const messagesContainer = ref(null)
 
-function toggleOpen() {
-  isOpen.value = !isOpen.value
-  if (isOpen.value) {
-    nextTick(scrollToBottom)
-  }
-}
-
+// ---------- helpers visuales ----------
 function formatTime(date) {
   if (!date) return ''
   const d = new Date(date)
@@ -162,120 +181,135 @@ const canSend = computed(
   () => newMessage.value.trim().length > 0 && !isSending.value,
 )
 
-// ========================
-//  SESIÓN DE CHAT
-// ========================
+// ---------- backend helpers ----------
+function mapBackendMessage(m) {
+  return {
+    id: m.id,
+    from: m.sender === 'agent' || m.sender === 'bot' ? 'bot' : 'user',
+    text: m.text,
+    ts: m.createdAt || new Date().toISOString(),
+  }
+}
+
 async function ensureSession() {
   if (sessionId.value) return sessionId.value
 
-  try {
-    const stored =
-      typeof window !== 'undefined'
-        ? window.localStorage?.getItem(STORAGE_KEY)
-        : null
+  const meta = getClientMeta({ origin: 'solar-widget' })
+  const session = await createChatSession(
+    {
+      ...meta,
+      sourceUrl:
+        (typeof window !== 'undefined' && window.location.href) || null,
+    },
+    {}, // contact vacío, después lo podés actualizar con nombre/teléfono
+    null,
+  )
 
-    if (stored) {
-      sessionId.value = parseInt(stored, 10) || null
-    }
-  } catch {
-    // ignore
-  }
-
-  if (sessionId.value) return sessionId.value
-
-  const session = await createChatSession()
   sessionId.value = session.id
-
-  try {
-    if (typeof window !== 'undefined') {
-      window.localStorage?.setItem(STORAGE_KEY, String(session.id))
-    }
-  } catch {
-    // ignore
-  }
-
+  startPolling()
   return session.id
 }
 
-// ========================
-//  ENVÍO DE MENSAJES
-// ========================
+async function loadHistory() {
+  if (!sessionId.value) return
+  isLoadingHistory.value = true
+  try {
+    const list = await listSessionMessages(sessionId.value)
+    messages.value = list.map(mapBackendMessage)
+    await nextTick()
+    scrollToBottom()
+  } catch (err) {
+    console.error('[Chatbot] Error cargando historial', err)
+  } finally {
+    isLoadingHistory.value = false
+  }
+}
+
+function startPolling() {
+  stopPolling()
+  pollingTimer.value = setInterval(() => {
+    loadHistory()
+  }, 5000) // cada 5 seg actualiza chat
+}
+
+function stopPolling() {
+  if (pollingTimer.value) {
+    clearInterval(pollingTimer.value)
+    pollingTimer.value = null
+  }
+}
+
+// ---------- acciones UI ----------
+function toggleOpen() {
+  isOpen.value = !isOpen.value
+  if (isOpen.value) {
+    nextTick(scrollToBottom)
+  }
+}
+
 async function handleSend() {
   if (!canSend.value) return
 
   const text = newMessage.value.trim()
   if (!text) return
 
-  // mensaje del usuario en UI
-  const localId = Date.now() + '-user'
-  const now = new Date()
-
-  messages.value.push({
-    id: localId,
+  // Mensaje local inmediato (mejora UX)
+  const localMsg = {
+    id: Date.now() + '-user',
     from: 'user',
     text,
-    ts: now,
-  })
-
+    ts: new Date(),
+  }
+  messages.value.push(localMsg)
   newMessage.value = ''
   await nextTick()
   scrollToBottom()
 
   isSending.value = true
-
   try {
-    const id = await ensureSession()
+    const sid = await ensureSession()
 
-    // Enviamos al backend (para que aparezca en el CRM)
-    await sendChatMessage(id, text, 'user', {
-      uiId: localId,
-    })
+    // Guardamos mensaje del usuario en backend
+    await sendChatMessage(sid, text, 'user', { origin: 'widget' })
 
-    // Acá podrías, más adelante, procesar respuestas automáticas del bot.
-  } catch (err) {
-    console.error('[Chatbot] Error enviando mensaje', err)
+    // (Opcional) auto-respuesta corta, también registrada en backend
+    const autoText =
+      'Gracias por tu consulta. Un asesor va a revisarla y, si hace falta, se contactará por este chat o por WhatsApp/mail.'
+    await sendChatMessage(sid, autoText, 'bot', { autoReply: true })
 
-    // Mensaje de error al usuario
     messages.value.push({
-      id: Date.now() + '-error',
+      id: Date.now() + '-bot',
       from: 'bot',
-      text:
-        'No pude enviar tu mensaje en este momento. ' +
-        'Por favor intentá de nuevo en unos segundos.',
+      text: autoText,
       ts: new Date(),
     })
 
     await nextTick()
     scrollToBottom()
+  } catch (err) {
+    console.error('[Chatbot] Error enviando mensaje', err)
   } finally {
     isSending.value = false
   }
 }
 
+// ---------- ciclo de vida ----------
 onMounted(() => {
-  // Mensaje de bienvenida
+  // Mensaje de bienvenida local
   messages.value.push({
     id: 'welcome-bot',
     from: 'bot',
     text:
       '¡Hola! Soy tu asistente virtual para energía solar. ' +
-      'Puedo ayudarte con dudas sobre el calculador, paneles solares y seguimiento de tu consulta.',
+      'Contame tu consulta y la derivamos al equipo comercial.',
     ts: new Date(),
   })
 
   nextTick(scrollToBottom)
+})
 
-  // Intentar recuperar sesión previa (si existiera)
-  try {
-    if (typeof window !== 'undefined') {
-      const stored = window.localStorage?.getItem(STORAGE_KEY)
-      if (stored) {
-        sessionId.value = parseInt(stored, 10) || null
-      }
-    }
-  } catch {
-    // ignore
-  }
+onBeforeUnmount(() => {
+  stopPolling()
 })
 </script>
 
