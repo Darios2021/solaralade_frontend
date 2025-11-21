@@ -138,6 +138,7 @@ import {
   computed,
 } from 'vue'
 
+import { getClientMeta } from '../service/clientMeta'
 import {
   createChatSession,
   sendChatMessage,
@@ -151,7 +152,11 @@ const isSending = ref(false)
 const isLoadingHistory = ref(false)
 
 const messages = ref([])
+
+// id de sesión en backend
 const sessionId = ref(null)
+
+// polling de historial (para ver respuestas del CRM)
 const pollingTimer = ref(null)
 
 const messagesContainer = ref(null)
@@ -189,34 +194,19 @@ function mapBackendMessage (m) {
 async function ensureSession () {
   if (sessionId.value) return sessionId.value
 
-  // si querés persistir sesión por navegador:
-  if (typeof window !== 'undefined') {
-    const stored = window.localStorage.getItem('solar-chat-session-id')
-    if (stored) {
-      sessionId.value = Number(stored)
-      startPolling()
-      await loadHistory()
-      return sessionId.value
-    }
-  }
-
+  const meta = getClientMeta({ origin: 'solar-widget' })
   const session = await createChatSession(
     {
+      ...meta,
       sourceUrl:
         (typeof window !== 'undefined' && window.location.href) || null,
     },
-    {},
+    {}, // contact vacío, después lo podés actualizar
     null,
   )
 
   sessionId.value = session.id
-
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem('solar-chat-session-id', String(session.id))
-  }
-
   startPolling()
-  await loadHistory()
   return session.id
 }
 
@@ -224,8 +214,10 @@ async function loadHistory () {
   if (!sessionId.value) return
   isLoadingHistory.value = true
   try {
-    const list = await fetchSessionMessages(sessionId.value)
-    messages.value = list.map(mapBackendMessage)
+    const { messages: backendMessages } =
+      await fetchSessionMessages(sessionId.value)
+
+    messages.value = backendMessages.map(mapBackendMessage)
     await nextTick()
     scrollToBottom()
   } catch (err) {
@@ -250,14 +242,17 @@ function stopPolling () {
 }
 
 // ---------- acciones UI ----------
-function toggleOpen () {
+async function toggleOpen () {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
-    nextTick(scrollToBottom)
-    // si ya había sesión, aseguro historial al abrir
-    if (sessionId.value) {
-      loadHistory()
-    }
+    // al abrir, aseguramos sesión y traemos historial (incluye mensajes del agente)
+    await ensureSession()
+    await loadHistory()
+    await nextTick()
+    scrollToBottom()
+  } else {
+    // si querés, podrías dejar polling activo; por ahora lo mantenemos
+    // para que siga entrando info aunque cierre el panel.
   }
 }
 
@@ -267,6 +262,7 @@ async function handleSend () {
   const text = newMessage.value.trim()
   if (!text) return
 
+  // Mensaje local inmediato (mejora UX)
   const localMsg = {
     id: Date.now() + '-user',
     from: 'user',
@@ -282,12 +278,24 @@ async function handleSend () {
   try {
     const sid = await ensureSession()
 
+    // Guardamos mensaje del usuario en backend
     await sendChatMessage(sid, text, 'user', { origin: 'widget' })
 
-    // No agrego auto-respuesta local: el CRM puede responder y
-    // el polling la va a traer. Si querés, podés dejar un texto corto:
-    // const autoText = 'Gracias por tu consulta...'
-    // await sendChatMessage(sid, autoText, 'bot', { autoReply: true })
+    // Auto-respuesta corta (y también registrada en backend si querés)
+    const autoText =
+      'Gracias por tu consulta. Un asesor va a revisarla y, si hace falta, se contactará por este chat o por WhatsApp/mail.'
+
+    await sendChatMessage(sid, autoText, 'bot', { autoReply: true })
+
+    messages.value.push({
+      id: Date.now() + '-bot',
+      from: 'bot',
+      text: autoText,
+      ts: new Date(),
+    })
+
+    await nextTick()
+    scrollToBottom()
   } catch (err) {
     console.error('[Chatbot] Error enviando mensaje', err)
   } finally {
@@ -297,6 +305,7 @@ async function handleSend () {
 
 // ---------- ciclo de vida ----------
 onMounted(() => {
+  // Mensaje de bienvenida local
   messages.value.push({
     id: 'welcome-bot',
     from: 'bot',
@@ -315,7 +324,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* (mismos estilos que ya tenías) */
 .chatbot-root {
   position: fixed;
   bottom: 16px;
@@ -323,12 +331,14 @@ onBeforeUnmount(() => {
   z-index: 9999;
 }
 
+/* BOTÓN FLOTANTE */
 .chatbot-fab {
   border-radius: 999px;
   padding-inline: 16px;
   font-weight: 600;
 }
 
+/* PANEL */
 .chatbot-card {
   position: absolute;
   bottom: 64px;
@@ -341,6 +351,7 @@ onBeforeUnmount(() => {
   border-radius: 18px;
 }
 
+/* HEADER */
 .chatbot-header {
   background: linear-gradient(135deg, #1a5634, #227346);
   color: #ffffff;
@@ -362,6 +373,7 @@ onBeforeUnmount(() => {
   background-color: #4caf50;
 }
 
+/* BOTÓN CERRAR */
 .chatbot-close-btn {
   border-radius: 999px;
   background-color: rgba(0, 0, 0, 0.1);
@@ -374,6 +386,7 @@ onBeforeUnmount(() => {
   transform: scale(1.05);
 }
 
+/* MENSAJES */
 .chatbot-messages-wrapper {
   padding: 0;
 }
@@ -424,6 +437,7 @@ onBeforeUnmount(() => {
   opacity: 0.85;
 }
 
+/* INPUT */
 .chatbot-input-wrapper {
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   background-color: #fafafa;
@@ -437,6 +451,7 @@ onBeforeUnmount(() => {
   opacity: 0.6;
 }
 
+/* BOTÓN ENVIAR */
 .chatbot-send-btn {
   border-radius: 999px;
   width: 44px;
@@ -460,6 +475,7 @@ onBeforeUnmount(() => {
   transform: translateX(1px);
 }
 
+/* ANIMACIONES PANEL */
 .chatbot-slide-enter-active,
 .chatbot-slide-leave-active {
   transition: all 0.18s ease-out;
@@ -471,6 +487,7 @@ chatbot-slide-leave-to {
   transform: translateY(10px);
 }
 
+/* ANIMACIONES MENSAJES */
 .chatbot-msg-enter-active {
   transition: all 0.18s ease-out;
 }
@@ -480,6 +497,7 @@ chatbot-slide-leave-to {
   transform: translateY(6px) scale(0.98);
 }
 
+/* RESPONSIVE */
 @media (max-width: 600px) {
   .chatbot-root {
     right: 12px;
