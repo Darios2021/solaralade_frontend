@@ -141,9 +141,19 @@ import {
 import { getClientMeta } from '../service/clientMeta'
 import {
   createChatSession,
-  sendChatMessage,
+  sendChatMessage as sendHttpMessage,
   fetchSessionMessages,
 } from '../service/chatClient'
+
+import {
+  connectSocket,
+  onChatMessage as onWsMessage,
+  offChatMessage as offWsMessage,
+  sendChatMessage as sendWsMessage,
+  onTyping,
+  offTyping,
+  sendTyping,
+} from '../service/chatSocket'
 
 // ---------- state básico ----------
 const isOpen = ref(false)
@@ -156,10 +166,11 @@ const messages = ref([])
 // id de sesión en backend
 const sessionId = ref(null)
 
-// polling de historial (para ver respuestas del CRM)
-const pollingTimer = ref(null)
-
 const messagesContainer = ref(null)
+
+let wsMessageHandler = null
+let wsTypingHandler = null
+const socketInitialized = ref(false)
 
 // ---------- helpers visuales ----------
 function formatTime (date) {
@@ -181,16 +192,26 @@ const canSend = computed(
   () => newMessage.value.trim().length > 0 && !isSending.value,
 )
 
-// ---------- backend helpers ----------
+// ---------- mapeos ----------
 function mapBackendMessage (m) {
   return {
-    id: m.id,
+    id: m.id || `${Date.now()}-${m.sender || 'agent'}`,
     from: m.sender === 'agent' || m.sender === 'bot' ? 'bot' : 'user',
     text: m.text,
     ts: m.createdAt || new Date().toISOString(),
   }
 }
 
+function mapSocketMessage (p) {
+  return {
+    id: p.id || `${Date.now()}-${p.from || 'agent'}`,
+    from: p.from === 'agent' || p.from === 'bot' ? 'bot' : 'user',
+    text: p.message,
+    ts: p.createdAt || new Date().toISOString(),
+  }
+}
+
+// ---------- backend helpers ----------
 async function ensureSession () {
   if (sessionId.value) return sessionId.value
 
@@ -201,12 +222,14 @@ async function ensureSession () {
       sourceUrl:
         (typeof window !== 'undefined' && window.location.href) || null,
     },
-    {}, // contact vacío, después lo podés actualizar
+    {}, // contact vacío
     null,
   )
 
   sessionId.value = session.id
-  startPolling()
+
+  initSocket()
+
   return session.id
 }
 
@@ -227,32 +250,40 @@ async function loadHistory () {
   }
 }
 
-function startPolling () {
-  stopPolling()
-  pollingTimer.value = setInterval(() => {
-    loadHistory()
-  }, 5000) // cada 5 seg
-}
+function initSocket () {
+  if (!sessionId.value || socketInitialized.value) return
 
-function stopPolling () {
-  if (pollingTimer.value) {
-    clearInterval(pollingTimer.value)
-    pollingTimer.value = null
+  connectSocket('visitor', sessionId.value)
+
+  wsMessageHandler = payload => {
+    // Ignoramos mensajes que vengan marcados como 'user'
+    // (porque ya los mostramos localmente).
+    if (payload.from === 'user') return
+
+    const msg = mapSocketMessage(payload)
+    messages.value.push(msg)
+    nextTick(scrollToBottom)
   }
+
+  wsTypingHandler = data => {
+    // Por ahora solo log, después podés mostrar "asesor escribiendo..."
+    // console.log('typing', data)
+  }
+
+  onWsMessage(wsMessageHandler)
+  onTyping(wsTypingHandler)
+
+  socketInitialized.value = true
 }
 
 // ---------- acciones UI ----------
 async function toggleOpen () {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
-    // al abrir, aseguramos sesión y traemos historial (incluye mensajes del agente)
     await ensureSession()
     await loadHistory()
     await nextTick()
     scrollToBottom()
-  } else {
-    // si querés, podrías dejar polling activo; por ahora lo mantenemos
-    // para que siga entrando info aunque cierre el panel.
   }
 }
 
@@ -262,7 +293,7 @@ async function handleSend () {
   const text = newMessage.value.trim()
   if (!text) return
 
-  // Mensaje local inmediato (mejora UX)
+  // Mensaje local inmediato (UX)
   const localMsg = {
     id: Date.now() + '-user',
     from: 'user',
@@ -278,21 +309,29 @@ async function handleSend () {
   try {
     const sid = await ensureSession()
 
-    // Guardamos mensaje del usuario en backend
-    await sendChatMessage(sid, text, 'user', { origin: 'widget' })
+    // HTTP para persistir en BD
+    await sendHttpMessage(sid, text, 'user', { origin: 'widget' })
 
-    // Auto-respuesta corta (y también registrada en backend si querés)
+    // WS para que el CRM reciba en tiempo real
+    sendWsMessage({ from: 'user', text })
+    sendTyping({ from: 'user', isTyping: false })
+
+    // Auto-respuesta local + persistida + enviada por WS como 'bot'
     const autoText =
       'Gracias por tu consulta. Un asesor va a revisarla y, si hace falta, se contactará por este chat o por WhatsApp/mail.'
 
-    await sendChatMessage(sid, autoText, 'bot', { autoReply: true })
+    await sendHttpMessage(sid, autoText, 'bot', { autoReply: true })
 
-    messages.value.push({
+    const autoMsg = {
       id: Date.now() + '-bot',
       from: 'bot',
       text: autoText,
       ts: new Date(),
-    })
+    }
+    messages.value.push(autoMsg)
+
+    // También se la mandamos al CRM por WS
+    sendWsMessage({ from: 'bot', text: autoText })
 
     await nextTick()
     scrollToBottom()
@@ -319,7 +358,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  stopPolling()
+  if (wsMessageHandler) offWsMessage(wsMessageHandler)
+  if (wsTypingHandler) offTyping(wsTypingHandler)
 })
 </script>
 
