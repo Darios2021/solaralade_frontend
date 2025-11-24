@@ -36,7 +36,7 @@ export default function useChatbot () {
 
   const messages = ref([])
 
-  // id de sesión en backend
+  // id de sesión en backend (ID único de la conversación)
   const sessionId = ref(null)
 
   // contacto que queremos capturar
@@ -133,7 +133,6 @@ export default function useChatbot () {
     isLoadingHistory.value = true
     try {
       const backendMessages = await fetchSessionMessages(sessionId.value)
-      // en este proyecto fetchSessionMessages devuelve ARRAY simple
       const arr = Array.isArray(backendMessages)
         ? backendMessages
         : backendMessages.messages || []
@@ -179,7 +178,6 @@ export default function useChatbot () {
 
       // si hay typing, seguro hay un agente conectado
       agentOnline.value = true
-
       agentTyping.value = !!data.typing
 
       if (agentTyping.value) {
@@ -441,6 +439,7 @@ export default function useChatbot () {
     messagesContainer,
     agentOnline,
     agentTyping,
+    sessionId, // por si querés mostrar el ID único en el widget
     // computeds
     canSend,
     statusText,
