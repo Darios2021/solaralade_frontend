@@ -150,9 +150,8 @@ export default function useChatbot () {
   function initSocket () {
     if (!sessionId.value || socketInitialized.value) return
 
-    // role "widget" → server lo mete en room "widgets"
-    // además, connectSocket emite joinSession(sessionId)
-    connectSocket('widget', sessionId.value)
+    // role "visitor" → en server va a room "widgets"
+    connectSocket('visitor', sessionId.value)
 
     // mensajes nuevos desde el CRM (agente / bot server)
     wsMessageHandler = payload => {
@@ -164,20 +163,22 @@ export default function useChatbot () {
       nextTick(scrollToBottom)
     }
 
-    // presencia de agentes POR SESIÓN: { sessionId, count }
+    // presencia de agentes: { sessionId, count }
     wsAgentsOnlineHandler = data => {
       if (!data) return
       const sid = String(data.sessionId || '')
-      if (!sid || sid !== String(sessionId.value || '')) {
-        // evento de otra sesión → no tocamos nuestro estado
+      const count = Number(data.count || 0)
+
+      if (!sessionId.value || sid !== String(sessionId.value)) {
+        // Evento de otra sesión → para este widget no hay agente
+        agentOnline.value = false
         return
       }
-      const count = Number(data.count || 0)
+
       agentOnline.value = count > 0
-      console.log('[Chatbot] agentsOnline(session) =>', sid, 'count=', count)
     }
 
-    // typing del agente POR SESIÓN: { sessionId, typing }
+    // typing del agente: { sessionId, typing }
     wsAgentTypingHandler = data => {
       if (!data) return
       if (String(data.sessionId || '') !== String(sessionId.value || '')) return
@@ -200,6 +201,9 @@ export default function useChatbot () {
 
   // ---------- flujo de captura de datos ----------
   async function askForName (sid) {
+    // si ya hay un agente en el chat, no seguimos con el flujo automático
+    if (agentOnline.value) return
+
     const text =
       'Antes de seguir, ¿me decís tu nombre y apellido para registrarte?'
 
@@ -216,6 +220,8 @@ export default function useChatbot () {
   }
 
   async function handleNameStep (sid, text) {
+    if (agentOnline.value) return
+
     contact.value.name = text.trim()
 
     const firstName = contact.value.name.split(' ')[0] || ''
@@ -237,6 +243,8 @@ export default function useChatbot () {
   }
 
   async function handleEmailStep (sid, text) {
+    if (agentOnline.value) return
+
     const email = text.trim()
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -272,6 +280,8 @@ export default function useChatbot () {
   }
 
   async function handlePhoneStep (sid, text) {
+    if (agentOnline.value) return
+
     const cleaned = (text || '').replace(/\D/g, '')
     if (cleaned.length < 6) {
       const retryText =
@@ -347,6 +357,7 @@ export default function useChatbot () {
     try {
       const sid = await ensureSession()
 
+      // Siempre persistimos el mensaje del usuario
       await sendHttpMessage(sid, text, 'user', {
         origin: 'widget',
         contactStage: contactStage.value,
@@ -359,6 +370,15 @@ export default function useChatbot () {
         message: text,
       })
 
+      // 👇 Si hay un agente presente en ESTA sesión,
+      //    dejamos que el humano maneje todo y NO seguimos con flujos automáticos.
+      if (agentOnline.value) {
+        await nextTick()
+        scrollToBottom()
+        return
+      }
+
+      // Si NO hay agente, seguimos con el flujo automático
       if (contactStage.value === 'askName') {
         await handleNameStep(sid, text)
       } else if (contactStage.value === 'askEmail') {
