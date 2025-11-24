@@ -170,12 +170,11 @@ import {
   onChatMessage as onWsMessage,
   offChatMessage as offWsMessage,
   sendChatMessage as sendWsMessage,
-  onTyping,
-  offTyping,
   sendTyping,
-  // si en tu chatSocket ya tenés presencia, podés agregar:
-  // onPresence,
-  // offPresence,
+  onAgentsOnline,
+  offAgentsOnline,
+  onAgentTyping,
+  offAgentTyping,
 } from '../service/chatSocket'
 
 // ---------- state básico ----------
@@ -197,18 +196,14 @@ const contact = ref({
 })
 
 // etapas para capturar los datos
-// 'none' -> todavía no pedimos datos
-// 'askName' -> esperando nombre y apellido
-// 'askEmail' -> esperando mail
-// 'askPhone' -> esperando teléfono
-// 'done' -> ya tenemos todo
+// 'none' | 'askName' | 'askEmail' | 'askPhone' | 'done'
 const contactStage = ref('none')
 
 const messagesContainer = ref(null)
 
 let wsMessageHandler = null
-let wsTypingHandler = null
-// let wsPresenceHandler = null
+let wsAgentsOnlineHandler = null
+let wsAgentTypingHandler = null
 const socketInitialized = ref(false)
 
 // estado de asesor
@@ -314,42 +309,39 @@ function initSocket () {
     nextTick(scrollToBottom)
   }
 
-  // typing del agente
-  wsTypingHandler = data => {
+  // presencia de agentes: { count }
+  wsAgentsOnlineHandler = data => {
     if (!data) return
-    if (data.from === 'agent') {
-      agentTyping.value = !!data.isTyping
-      // se apaga solo después de unos segundos si no llega nada más
-      if (agentTyping.value) {
-        setTimeout(() => {
-          agentTyping.value = false
-        }, 5000)
-      }
+    const count = Number(data.count || 0)
+    agentOnline.value = count > 0
+  }
+
+  // typing del agente: { sessionId, typing }
+  wsAgentTypingHandler = data => {
+    if (!data) return
+    if (String(data.sessionId || '') !== String(sessionId.value || '')) return
+
+    agentTyping.value = !!data.typing
+
+    if (agentTyping.value) {
+      setTimeout(() => {
+        agentTyping.value = false
+      }, 5000)
     }
   }
 
-  // presencia (si la tenés implementada en el server y chatSocket)
-  /*
-  wsPresenceHandler = data => {
-    if (!data || data.sessionId !== sessionId.value) return
-    agentOnline.value = !!data.agentOnline
-  }
-  */
-
   onWsMessage(wsMessageHandler)
-  onTyping(wsTypingHandler)
-  // onPresence(wsPresenceHandler)
+  onAgentsOnline(wsAgentsOnlineHandler)
+  onAgentTyping(wsAgentTypingHandler)
 
   socketInitialized.value = true
 }
 
 // ---------- flujo de captura de datos ----------
-
 async function askForName (sid) {
   const text =
     'Antes de seguir, ¿me decís tu nombre y apellido para registrarte?'
 
-  // lo persistimos también como mensaje de bot
   await sendHttpMessage(sid, text, 'bot', { kind: 'askName' })
 
   messages.value.push({
@@ -436,7 +428,6 @@ async function handlePhoneStep (sid, text) {
 
   contact.value.phone = text.trim()
 
-  // guardamos en la sesión de chat
   try {
     await updateChatContact(sid, {
       name: contact.value.name,
@@ -479,7 +470,6 @@ async function handleSend () {
   const text = newMessage.value.trim()
   if (!text) return
 
-  // Mensaje local inmediato (UX)
   const localMsg = {
     id: Date.now() + '-user',
     from: 'user',
@@ -496,7 +486,6 @@ async function handleSend () {
   try {
     const sid = await ensureSession()
 
-    // HTTP para persistir en BD (siempre lo guardamos como mensaje de usuario)
     await sendHttpMessage(sid, text, 'user', {
       origin: 'widget',
       contactStage: contactStage.value,
@@ -505,7 +494,6 @@ async function handleSend () {
     // WS para que el CRM reciba en tiempo real
     sendWsMessage({ from: 'user', text })
 
-    // según la etapa, corremos un flujo u otro
     if (contactStage.value === 'askName') {
       await handleNameStep(sid, text)
     } else if (contactStage.value === 'askEmail') {
@@ -513,7 +501,6 @@ async function handleSend () {
     } else if (contactStage.value === 'askPhone') {
       await handlePhoneStep(sid, text)
     } else {
-      // flujo normal: auto-respuesta + luego pedir datos
       const autoText =
         'Gracias por tu consulta. Un asesor va a revisarla y, si hace falta, se contactará por este chat o por WhatsApp/mail.'
 
@@ -527,10 +514,8 @@ async function handleSend () {
       }
       messages.value.push(autoMsg)
 
-      // También se la mandamos al CRM por WS
       sendWsMessage({ from: 'bot', text: autoText })
 
-      // después de la primera respuesta pedimos datos
       if (contactStage.value === 'none') {
         await askForName(sid)
       }
@@ -542,7 +527,6 @@ async function handleSend () {
     console.error('[Chatbot] Error enviando mensaje', err)
   } finally {
     isSending.value = false
-    // avisamos que dejamos de escribir
     sendTyping({ from: 'user', isTyping: false })
   }
 }
@@ -550,7 +534,6 @@ async function handleSend () {
 // avisar al CRM que el usuario está / dejó de escribir
 let typingTimeout = null
 function handleTyping () {
-  // apenas empieza a tipear, mandamos isTyping true
   sendTyping({ from: 'user', isTyping: true })
 
   if (typingTimeout) clearTimeout(typingTimeout)
@@ -561,7 +544,6 @@ function handleTyping () {
 
 // ---------- ciclo de vida ----------
 onMounted(() => {
-  // Mensaje de bienvenida local
   messages.value.push({
     id: 'welcome-bot',
     from: 'bot',
@@ -576,8 +558,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (wsMessageHandler) offWsMessage(wsMessageHandler)
-  if (wsTypingHandler) offTyping(wsTypingHandler)
-  // if (wsPresenceHandler) offPresence(wsPresenceHandler)
+  if (wsAgentsOnlineHandler) offAgentsOnline(wsAgentsOnlineHandler)
+  if (wsAgentTypingHandler) offAgentTyping(wsAgentTypingHandler)
 })
 </script>
 

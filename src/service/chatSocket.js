@@ -9,7 +9,12 @@ const SOCKET_URL =
   import.meta.env.VITE_SOLAR_SOCKET_URL ||
   'https://solar-backend.cingulado.org'
 
-export function connectSocket(userType = 'visitor', sessionId) {
+/**
+ * Conecta el socket del widget.
+ * userType: 'visitor' (widget) o 'agent' (si alguna vez lo reutilizás)
+ * sessionId: id de sesión de chat
+ */
+export function connectSocket (userType = 'visitor', sessionId) {
   if (!sessionId) return null
 
   // Si ya estoy conectado a esta sesión, no reconecto
@@ -19,13 +24,17 @@ export function connectSocket(userType = 'visitor', sessionId) {
 
   currentSessionId = sessionId
 
+  // el server espera role en el query: 'widget' o 'agent'
+  const role = userType === 'agent' ? 'agent' : 'widget'
+
   socket = io(SOCKET_URL, {
     transports: ['websocket'],
     withCredentials: true,
+    query: { role },
   })
 
   socket.on('connect', () => {
-    console.log('🟢 Socket conectado:', socket.id)
+    console.log('🟢 Socket conectado:', socket.id, 'role =', role)
 
     socket.emit('joinSession', {
       sessionId: currentSessionId,
@@ -40,17 +49,21 @@ export function connectSocket(userType = 'visitor', sessionId) {
   return socket
 }
 
-export function onChatMessage(callback) {
+/* ===========================
+   MENSAJES DE CHAT
+   =========================== */
+
+export function onChatMessage (callback) {
   if (!socket) return
   socket.on('chatMessage', callback)
 }
 
-export function offChatMessage(callback) {
+export function offChatMessage (callback) {
   if (!socket) return
   socket.off('chatMessage', callback)
 }
 
-export function sendChatMessage({ from = 'visitor', text }) {
+export function sendChatMessage ({ from = 'visitor', text }) {
   if (!socket || !socket.connected || !currentSessionId) return
 
   socket.emit('chatMessage', {
@@ -60,7 +73,12 @@ export function sendChatMessage({ from = 'visitor', text }) {
   })
 }
 
-export function sendTyping({ from = 'visitor', isTyping }) {
+/* ===========================
+   TYPING DEL VISITANTE
+   (hacia el CRM) — opcional
+   =========================== */
+
+export function sendTyping ({ from = 'visitor', isTyping }) {
   if (!socket || !socket.connected || !currentSessionId) return
 
   socket.emit('typing', {
@@ -70,12 +88,39 @@ export function sendTyping({ from = 'visitor', isTyping }) {
   })
 }
 
-export function onTyping(callback) {
+export function onTyping (callback) {
   if (!socket) return
   socket.on('typing', callback)
 }
 
-export function offTyping(callback) {
+export function offTyping (callback) {
   if (!socket) return
   socket.off('typing', callback)
+}
+
+/* ===========================
+   PRESENCIA Y TYPING DEL AGENTE
+   (eventos que emite el server)
+   =========================== */
+
+/** cantidad de agentes conectados total → { count } */
+export function onAgentsOnline (callback) {
+  if (!socket) return
+  socket.on('agentsOnline', callback)
+}
+
+export function offAgentsOnline (callback) {
+  if (!socket) return
+  socket.off('agentsOnline', callback)
+}
+
+/** typing del agente en esta sesión → { sessionId, typing } */
+export function onAgentTyping (callback) {
+  if (!socket) return
+  socket.on('agentTyping', callback)
+}
+
+export function offAgentTyping (callback) {
+  if (!socket) return
+  socket.off('agentTyping', callback)
 }
