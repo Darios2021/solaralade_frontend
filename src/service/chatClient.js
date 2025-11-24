@@ -5,7 +5,10 @@ import { getClientMeta } from './clientMeta'
 //  BASE URL BACKEND
 // ===============================
 const API_BASE_URL =
-  (import.meta && import.meta.env && import.meta.env.VITE_API_BASE_URL) ||
+  (import.meta &&
+    import.meta.env &&
+    (import.meta.env.VITE_SOLAR_API_BASE_URL ||
+      import.meta.env.VITE_API_BASE_URL)) ||
   (typeof window !== 'undefined' && window.SOLAR_CALCULATOR_API_BASE) ||
   'https://solar-backend.cingulado.org'
 
@@ -43,13 +46,17 @@ async function request (path, options = {}) {
 }
 
 // ===============================
-//  CHAT API
+//  CHAT API (WIDGET)
 // ===============================
 
 /**
  * Crea una sesión de chat nueva.
  */
-export async function createChatSession (extraMeta = {}, contact = {}, leadId = null) {
+export async function createChatSession (
+  extraMeta = {},
+  contact = {},
+  leadId = null,
+) {
   const clientMeta = getClientMeta({
     origin: 'widget',
     ...extraMeta,
@@ -66,13 +73,33 @@ export async function createChatSession (extraMeta = {}, contact = {}, leadId = 
     body: JSON.stringify(body),
   })
 
+  // backend: { ok:true, session:{...} }
+  return data.session
+}
+
+/**
+ * Actualiza datos de contacto de la sesión
+ * (nombre, email, teléfono, leadId, etc.).
+ */
+export async function updateChatContact (sessionId, contact = {}) {
+  const data = await request(`/api/chat/session/${sessionId}/contact`, {
+    method: 'PATCH',
+    body: JSON.stringify(contact),
+  })
+
+  // backend: { ok:true, session:{...} }
   return data.session
 }
 
 /**
  * Envía un mensaje dentro de una sesión.
  */
-export async function sendChatMessage (sessionId, text, sender = 'user', meta = {}) {
+export async function sendChatMessage (
+  sessionId,
+  text,
+  sender = 'user',
+  meta = {},
+) {
   const body = {
     sessionId,
     text,
@@ -88,25 +115,39 @@ export async function sendChatMessage (sessionId, text, sender = 'user', meta = 
     body: JSON.stringify(body),
   })
 
+  // backend: { ok:true, message:{...} }
   return data.message
 }
 
 /**
  * Recuperar historial completo de una sesión.
+ * Devuelve el objeto completo:
+ *   { session, messages }
+ * para que el widget pueda conocer también metadatos.
  */
 export async function fetchSessionMessages (sessionId) {
   const data = await request(`/api/chat/sessions/${sessionId}/messages`, {
     method: 'GET',
   })
 
-  return data.messages || []
+  // backend: { ok:true, session:{...}, messages:[...] }
+  return {
+    session: data.session || null,
+    messages: data.messages || [],
+  }
 }
 
-// Alias por si en algún lado quedó el nombre viejo
-export const listSessionMessages = fetchSessionMessages
+/**
+ * Alias de conveniencia: solo devuelve el array de mensajes.
+ */
+export async function listSessionMessages (sessionId) {
+  const { messages } = await fetchSessionMessages(sessionId)
+  return messages
+}
 
 const chatClient = {
   createChatSession,
+  updateChatContact,
   sendChatMessage,
   fetchSessionMessages,
   listSessionMessages,
