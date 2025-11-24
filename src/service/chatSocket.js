@@ -17,11 +17,18 @@ const agentsOnlineHandlers = new Set()
 const agentTypingHandlers = new Set()
 
 /**
- * Conecta el socket (si ya está conectado, reutiliza).
- * role: 'widget' | 'agent' | lo que quieras (en server.js cualquier cosa ≠ 'agent' se toma como widget)
+ * Conecta el socket.
+ * role: 'visitor' (widget) | 'agent'
+ * sessionId: ID de sesión de chat para unirse al room de esa sesión
  */
-export function connectSocket (role = 'widget') {
-  if (socket && socket.connected) return socket
+export function connectSocket (role = 'visitor', sessionId = null) {
+  if (socket && socket.connected) {
+    // si ya está conectado, solo aseguramos que esté en el room de sesión
+    if (sessionId) {
+      socket.emit('joinSession', { sessionId: String(sessionId) })
+    }
+    return socket
+  }
 
   socket = io(WS_URL, {
     transports: ['websocket'],
@@ -31,13 +38,18 @@ export function connectSocket (role = 'widget') {
 
   socket.on('connect', () => {
     console.log('[ChatSock] conectado', socket.id, 'role =', role)
+
+    // al conectar por primera vez, nos unimos al room de la sesión
+    if (sessionId) {
+      socket.emit('joinSession', { sessionId: String(sessionId) })
+    }
   })
 
   socket.on('disconnect', () => {
     console.log('[ChatSock] desconectado')
   })
 
-  // Mensajes de chat en tiempo real
+  // Mensajes de chat
   socket.on('chatMessage', payload => {
     messageHandlers.forEach(fn => {
       try {
@@ -48,7 +60,7 @@ export function connectSocket (role = 'widget') {
     })
   })
 
-  // Cantidad de agentes en línea
+  // Presencia de agentes
   socket.on('agentsOnline', payload => {
     agentsOnlineHandlers.forEach(fn => {
       try {
@@ -59,7 +71,7 @@ export function connectSocket (role = 'widget') {
     })
   })
 
-  // “Agente escribiendo…”
+  // Indicador “agente escribiendo”
   socket.on('agentTyping', payload => {
     agentTypingHandlers.forEach(fn => {
       try {
@@ -74,7 +86,7 @@ export function connectSocket (role = 'widget') {
 }
 
 /**
- * Enviar mensaje por WebSocket
+ * Enviar mensaje de chat por WS
  * payload: { sessionId, from: 'user' | 'bot' | 'agent' | 'system', message }
  */
 export function sendChatMessage ({ sessionId, from, message }) {
@@ -91,15 +103,15 @@ export function sendChatMessage ({ sessionId, from, message }) {
 }
 
 /**
- * Typing del usuario (por ahora NO se usa en el server;
- * lo dejamos como no-op para no romper el uso actual del composable)
+ * “Typing” desde el widget → por ahora NO se usa en el server,
+ * dejamos un no-op para no romper la firma que espera useChatbot.
  */
 export function sendTyping (_payload) {
-  // noop: el indicador typing que usamos en el widget viene del agente → server → widget
+  // noop
 }
 
 /**
- * Suscripciones
+ * Suscribir/Desuscribir handlers
  */
 export function onChatMessage (fn) {
   if (typeof fn === 'function') messageHandlers.add(fn)

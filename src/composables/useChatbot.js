@@ -151,7 +151,8 @@ export default function useChatbot () {
   function initSocket () {
     if (!sessionId.value || socketInitialized.value) return
 
-    // role "visitor" → en server va a parar al room "widgets"
+    // role "visitor" → en server va a room "widgets"
+    // además, connectSocket emite joinSession(sessionId)
     connectSocket('visitor', sessionId.value)
 
     // mensajes nuevos desde el CRM (agente / bot server)
