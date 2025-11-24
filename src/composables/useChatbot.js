@@ -133,7 +133,6 @@ export default function useChatbot () {
     isLoadingHistory.value = true
     try {
       const backendMessages = await fetchSessionMessages(sessionId.value)
-      // en este proyecto fetchSessionMessages devuelve ARRAY simple
       const arr = Array.isArray(backendMessages)
         ? backendMessages
         : backendMessages.messages || []
@@ -151,7 +150,7 @@ export default function useChatbot () {
   function initSocket () {
     if (!sessionId.value || socketInitialized.value) return
 
-    // role "widget" → en server va a room "widgets"
+    // role "widget" → server lo mete en room "widgets"
     // además, connectSocket emite joinSession(sessionId)
     connectSocket('widget', sessionId.value)
 
@@ -165,15 +164,20 @@ export default function useChatbot () {
       nextTick(scrollToBottom)
     }
 
-    // presencia de agentes: { count }
+    // presencia de agentes POR SESIÓN: { sessionId, count }
     wsAgentsOnlineHandler = data => {
       if (!data) return
+      const sid = String(data.sessionId || '')
+      if (!sid || sid !== String(sessionId.value || '')) {
+        // evento de otra sesión → no tocamos nuestro estado
+        return
+      }
       const count = Number(data.count || 0)
       agentOnline.value = count > 0
-      console.log('[Chatbot] agentsOnline =>', count)
+      console.log('[Chatbot] agentsOnline(session) =>', sid, 'count=', count)
     }
 
-    // typing del agente: { sessionId, typing }
+    // typing del agente POR SESIÓN: { sessionId, typing }
     wsAgentTypingHandler = data => {
       if (!data) return
       if (String(data.sessionId || '') !== String(sessionId.value || '')) return

@@ -22,7 +22,7 @@ const agentTypingHandlers = new Set()
  * sessionId: ID de sesión de chat para unirse al room de esa sesión
  */
 export function connectSocket (role = 'widget', sessionId = null) {
-  // Si ya hay socket conectado, sólo aseguramos que se sume al room de sesión
+  // Si ya hay socket conectado, solo lo unimos al room de sesión
   if (socket && socket.connected) {
     if (sessionId) {
       socket.emit('joinSession', { sessionId: String(sessionId) })
@@ -37,8 +37,8 @@ export function connectSocket (role = 'widget', sessionId = null) {
   })
 
   socket.on('connect', () => {
-    console.log('[ChatSock widget] conectado', socket.id, 'role =', role)
-    // al conectar, si tenemos sessionId, nos unimos al room
+    console.log('[ChatSock widget] conectado', socket.id, 'role=', role)
+
     if (sessionId) {
       socket.emit('joinSession', { sessionId: String(sessionId) })
     }
@@ -48,7 +48,7 @@ export function connectSocket (role = 'widget', sessionId = null) {
     console.log('[ChatSock widget] desconectado')
   })
 
-  // Mensajes de chat desde el server (agente / bot server)
+  // Mensajes de chat (desde el server)
   socket.on('chatMessage', payload => {
     messageHandlers.forEach(fn => {
       try {
@@ -59,7 +59,7 @@ export function connectSocket (role = 'widget', sessionId = null) {
     })
   })
 
-  // Presencia de agentes (broadcastAgentsOnline del server)
+  // Presencia de agentes POR SESIÓN { sessionId, count }
   socket.on('agentsOnline', payload => {
     agentsOnlineHandlers.forEach(fn => {
       try {
@@ -70,7 +70,7 @@ export function connectSocket (role = 'widget', sessionId = null) {
     })
   })
 
-  // Indicador “agente escribiendo”
+  // Indicador “agente escribiendo” POR SESIÓN
   socket.on('agentTyping', payload => {
     agentTypingHandlers.forEach(fn => {
       try {
@@ -102,11 +102,10 @@ export function sendChatMessage ({ sessionId, from, message }) {
 }
 
 /**
- * “Typing” desde el widget → por ahora NO se usa en el server,
- * dejamos un no-op para no romper la firma que espera useChatbot.
+ * “Typing” desde el widget → por ahora NO se usa en el server
  */
 export function sendTyping (_payload) {
-  // noop por ahora
+  // noop
 }
 
 /**
