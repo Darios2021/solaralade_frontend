@@ -81,10 +81,9 @@ export default function useChatbot () {
     () => newMessage.value.trim().length > 0 && !isSending.value,
   )
 
-  // 👉 ya NO usamos agentOnline para el texto de estado
   const statusText = computed(() => {
     if (agentTyping.value) return 'Un asesor está escribiendo…'
-    // siempre mostramos el texto “genérico” cuando no está escribiendo
+    if (agentOnline.value) return 'Asesor en línea'
     return 'Dejanos tu consulta y la revisamos a la brevedad'
   })
 
@@ -134,6 +133,7 @@ export default function useChatbot () {
     isLoadingHistory.value = true
     try {
       const backendMessages = await fetchSessionMessages(sessionId.value)
+      // en este proyecto fetchSessionMessages devuelve ARRAY simple
       const arr = Array.isArray(backendMessages)
         ? backendMessages
         : backendMessages.messages || []
@@ -151,9 +151,9 @@ export default function useChatbot () {
   function initSocket () {
     if (!sessionId.value || socketInitialized.value) return
 
-    // role "visitor" → en server va a room "widgets"
+    // role "widget" → en server va a room "widgets"
     // además, connectSocket emite joinSession(sessionId)
-    connectSocket('visitor', sessionId.value)
+    connectSocket('widget', sessionId.value)
 
     // mensajes nuevos desde el CRM (agente / bot server)
     wsMessageHandler = payload => {
@@ -165,11 +165,12 @@ export default function useChatbot () {
       nextTick(scrollToBottom)
     }
 
-    // presencia de agentes: { count } – la seguimos guardando por si
+    // presencia de agentes: { count }
     wsAgentsOnlineHandler = data => {
       if (!data) return
       const count = Number(data.count || 0)
       agentOnline.value = count > 0
+      console.log('[Chatbot] agentsOnline =>', count)
     }
 
     // typing del agente: { sessionId, typing }

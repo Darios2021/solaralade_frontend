@@ -17,13 +17,13 @@ const agentsOnlineHandlers = new Set()
 const agentTypingHandlers = new Set()
 
 /**
- * Conecta el socket.
- * role: 'visitor' (widget) | 'agent'
+ * Conecta el socket del WIDGET.
+ * role: 'widget' (por defecto)
  * sessionId: ID de sesión de chat para unirse al room de esa sesión
  */
-export function connectSocket (role = 'visitor', sessionId = null) {
+export function connectSocket (role = 'widget', sessionId = null) {
+  // Si ya hay socket conectado, sólo aseguramos que se sume al room de sesión
   if (socket && socket.connected) {
-    // si ya está conectado, solo aseguramos que esté en el room de sesión
     if (sessionId) {
       socket.emit('joinSession', { sessionId: String(sessionId) })
     }
@@ -37,36 +37,35 @@ export function connectSocket (role = 'visitor', sessionId = null) {
   })
 
   socket.on('connect', () => {
-    console.log('[ChatSock] conectado', socket.id, 'role =', role)
-
-    // al conectar por primera vez, nos unimos al room de la sesión
+    console.log('[ChatSock widget] conectado', socket.id, 'role =', role)
+    // al conectar, si tenemos sessionId, nos unimos al room
     if (sessionId) {
       socket.emit('joinSession', { sessionId: String(sessionId) })
     }
   })
 
   socket.on('disconnect', () => {
-    console.log('[ChatSock] desconectado')
+    console.log('[ChatSock widget] desconectado')
   })
 
-  // Mensajes de chat
+  // Mensajes de chat desde el server (agente / bot server)
   socket.on('chatMessage', payload => {
     messageHandlers.forEach(fn => {
       try {
         fn(payload)
       } catch (e) {
-        console.error('[ChatSock] error en handler chatMessage', e)
+        console.error('[ChatSock widget] error en handler chatMessage', e)
       }
     })
   })
 
-  // Presencia de agentes
+  // Presencia de agentes (broadcastAgentsOnline del server)
   socket.on('agentsOnline', payload => {
     agentsOnlineHandlers.forEach(fn => {
       try {
         fn(payload)
       } catch (e) {
-        console.error('[ChatSock] error en handler agentsOnline', e)
+        console.error('[ChatSock widget] error en handler agentsOnline', e)
       }
     })
   })
@@ -77,7 +76,7 @@ export function connectSocket (role = 'visitor', sessionId = null) {
       try {
         fn(payload)
       } catch (e) {
-        console.error('[ChatSock] error en handler agentTyping', e)
+        console.error('[ChatSock widget] error en handler agentTyping', e)
       }
     })
   })
@@ -107,7 +106,7 @@ export function sendChatMessage ({ sessionId, from, message }) {
  * dejamos un no-op para no romper la firma que espera useChatbot.
  */
 export function sendTyping (_payload) {
-  // noop
+  // noop por ahora
 }
 
 /**
