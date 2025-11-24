@@ -151,6 +151,7 @@ export default function useChatbot () {
   function initSocket () {
     if (!sessionId.value || socketInitialized.value) return
 
+    // role "visitor" → en server va a parar al room "widgets"
     connectSocket('visitor', sessionId.value)
 
     // mensajes nuevos desde el CRM (agente / bot server)
@@ -345,8 +346,12 @@ export default function useChatbot () {
         contactStage: contactStage.value,
       })
 
-      // WS para que el CRM reciba en tiempo real
-      sendWsMessage({ from: 'user', text })
+      // WS para que el CRM reciba en tiempo real (ahora con sessionId)
+      sendWsMessage({
+        sessionId: sid,
+        from: 'user',
+        message: text,
+      })
 
       if (contactStage.value === 'askName') {
         await handleNameStep(sid, text)
@@ -368,7 +373,12 @@ export default function useChatbot () {
         }
         messages.value.push(autoMsg)
 
-        sendWsMessage({ from: 'bot', text: autoText })
+        // también por WS, con sessionId
+        sendWsMessage({
+          sessionId: sid,
+          from: 'bot',
+          message: autoText,
+        })
 
         if (contactStage.value === 'none') {
           await askForName(sid)

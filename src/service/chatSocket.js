@@ -1,126 +1,126 @@
 // src/service/chatSocket.js
 import { io } from 'socket.io-client'
 
-let socket = null
-let currentSessionId = null
-
-// URL del backend (podés pasarlo a .env si querés)
-const SOCKET_URL =
-  import.meta.env.VITE_SOLAR_SOCKET_URL ||
+const WS_URL =
+  (import.meta &&
+    import.meta.env &&
+    (import.meta.env.VITE_SOLAR_API_BASE_URL ||
+      import.meta.env.VITE_API_BASE_URL)) ||
+  (typeof window !== 'undefined' && window.SOLAR_CALCULATOR_API_BASE) ||
   'https://solar-backend.cingulado.org'
 
+let socket = null
+
+// listeners registrados desde el widget
+const messageHandlers = new Set()
+const agentsOnlineHandlers = new Set()
+const agentTypingHandlers = new Set()
+
 /**
- * Conecta el socket del widget.
- * userType: 'visitor' (widget) o 'agent' (si alguna vez lo reutilizás)
- * sessionId: id de sesión de chat
+ * Conecta el socket (si ya está conectado, reutiliza).
+ * role: 'widget' | 'agent' | lo que quieras (en server.js cualquier cosa ≠ 'agent' se toma como widget)
  */
-export function connectSocket (userType = 'visitor', sessionId) {
-  if (!sessionId) return null
+export function connectSocket (role = 'widget') {
+  if (socket && socket.connected) return socket
 
-  // Si ya estoy conectado a esta sesión, no reconecto
-  if (socket && socket.connected && currentSessionId === sessionId) {
-    return socket
-  }
-
-  currentSessionId = sessionId
-
-  // el server espera role en el query: 'widget' o 'agent'
-  const role = userType === 'agent' ? 'agent' : 'widget'
-
-  socket = io(SOCKET_URL, {
+  socket = io(WS_URL, {
     transports: ['websocket'],
-    withCredentials: true,
+    path: '/socket.io',
     query: { role },
   })
 
   socket.on('connect', () => {
-    console.log('🟢 Socket conectado:', socket.id, 'role =', role)
-
-    socket.emit('joinSession', {
-      sessionId: currentSessionId,
-      userType,
-    })
+    console.log('[ChatSock] conectado', socket.id, 'role =', role)
   })
 
   socket.on('disconnect', () => {
-    console.log('🔴 Socket desconectado')
+    console.log('[ChatSock] desconectado')
+  })
+
+  // Mensajes de chat en tiempo real
+  socket.on('chatMessage', payload => {
+    messageHandlers.forEach(fn => {
+      try {
+        fn(payload)
+      } catch (e) {
+        console.error('[ChatSock] error en handler chatMessage', e)
+      }
+    })
+  })
+
+  // Cantidad de agentes en línea
+  socket.on('agentsOnline', payload => {
+    agentsOnlineHandlers.forEach(fn => {
+      try {
+        fn(payload)
+      } catch (e) {
+        console.error('[ChatSock] error en handler agentsOnline', e)
+      }
+    })
+  })
+
+  // “Agente escribiendo…”
+  socket.on('agentTyping', payload => {
+    agentTypingHandlers.forEach(fn => {
+      try {
+        fn(payload)
+      } catch (e) {
+        console.error('[ChatSock] error en handler agentTyping', e)
+      }
+    })
   })
 
   return socket
 }
 
-/* ===========================
-   MENSAJES DE CHAT
-   =========================== */
-
-export function onChatMessage (callback) {
+/**
+ * Enviar mensaje por WebSocket
+ * payload: { sessionId, from: 'user' | 'bot' | 'agent' | 'system', message }
+ */
+export function sendChatMessage ({ sessionId, from, message }) {
   if (!socket) return
-  socket.on('chatMessage', callback)
-}
+  if (!sessionId) return
 
-export function offChatMessage (callback) {
-  if (!socket) return
-  socket.off('chatMessage', callback)
-}
-
-export function sendChatMessage ({ from = 'visitor', text }) {
-  if (!socket || !socket.connected || !currentSessionId) return
-
-  socket.emit('chatMessage', {
-    sessionId: currentSessionId,
+  const payload = {
+    sessionId: String(sessionId),
     from,
-    message: text,
-  })
+    message,
+  }
+
+  socket.emit('chatMessage', payload)
 }
 
-/* ===========================
-   TYPING DEL VISITANTE
-   (hacia el CRM) — opcional
-   =========================== */
-
-export function sendTyping ({ from = 'visitor', isTyping }) {
-  if (!socket || !socket.connected || !currentSessionId) return
-
-  socket.emit('typing', {
-    sessionId: currentSessionId,
-    from,
-    isTyping: !!isTyping,
-  })
+/**
+ * Typing del usuario (por ahora NO se usa en el server;
+ * lo dejamos como no-op para no romper el uso actual del composable)
+ */
+export function sendTyping (_payload) {
+  // noop: el indicador typing que usamos en el widget viene del agente → server → widget
 }
 
-export function onTyping (callback) {
-  if (!socket) return
-  socket.on('typing', callback)
+/**
+ * Suscripciones
+ */
+export function onChatMessage (fn) {
+  if (typeof fn === 'function') messageHandlers.add(fn)
 }
 
-export function offTyping (callback) {
-  if (!socket) return
-  socket.off('typing', callback)
+export function offChatMessage (fn) {
+  messageHandlers.delete(fn)
 }
 
-/* ===========================
-   PRESENCIA Y TYPING DEL AGENTE
-   (eventos que emite el server)
-   =========================== */
-
-/** cantidad de agentes conectados total → { count } */
-export function onAgentsOnline (callback) {
-  if (!socket) return
-  socket.on('agentsOnline', callback)
+export function onAgentsOnline (fn) {
+  if (typeof fn === 'function') agentsOnlineHandlers.add(fn)
 }
 
-export function offAgentsOnline (callback) {
-  if (!socket) return
-  socket.off('agentsOnline', callback)
+export function offAgentsOnline (fn) {
+  agentsOnlineHandlers.delete(fn)
 }
 
-/** typing del agente en esta sesión → { sessionId, typing } */
-export function onAgentTyping (callback) {
-  if (!socket) return
-  socket.on('agentTyping', callback)
+export function onAgentTyping (fn) {
+  if (typeof fn === 'function') agentTypingHandlers.add(fn)
 }
 
-export function offAgentTyping (callback) {
-  if (!socket) return
-  socket.off('agentTyping', callback)
+export function offAgentTyping (fn) {
+  agentTypingHandlers.delete(fn)
 }
