@@ -27,6 +27,36 @@ import {
   offAgentTyping,
 } from '../service/chatSocket'
 
+// ==== PERSISTENCIA DE SESIÓN EN LOCALSTORAGE ====
+const STORAGE_KEY = 'solar_chat_session_v1'
+const MS_PER_HOUR = 60 * 60 * 1000
+// Ajustá estos valores si querés otra ventana de "misma conversación"
+const MAX_SESSION_AGE_HOURS = 24      // máximo desde que se creó
+const MAX_SESSION_IDLE_HOURS = 12     // máximo tiempo sin actividad
+
+function loadStoredSession () {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch (e) {
+    console.error('[Chatbot] Error leyendo STORAGE_KEY', e)
+    return null
+  }
+}
+
+function saveSessionToStorage (data) {
+  if (typeof window === 'undefined') return
+  try {
+    const prev = loadStoredSession() || {}
+    const merged = { ...prev, ...data }
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
+  } catch (e) {
+    console.error('[Chatbot] Error guardando STORAGE_KEY', e)
+  }
+}
+
 export default function useChatbot () {
   // ---------- state básico ----------
   const isOpen = ref(false)
@@ -110,6 +140,49 @@ export default function useChatbot () {
   async function ensureSession () {
     if (sessionId.value) return sessionId.value
 
+    const now = Date.now()
+    const stored = loadStoredSession()
+
+    if (stored && stored.id) {
+      const createdAtMs = stored.createdAt
+        ? new Date(stored.createdAt).getTime()
+        : null
+      const lastSeenAtMs = stored.lastSeenAt
+        ? new Date(stored.lastSeenAt).getTime()
+        : null
+
+      const tooOld =
+        createdAtMs && now - createdAtMs > MAX_SESSION_AGE_HOURS * MS_PER_HOUR
+      const tooIdle =
+        lastSeenAtMs && now - lastSeenAtMs > MAX_SESSION_IDLE_HOURS * MS_PER_HOUR
+
+      if (!tooOld && !tooIdle) {
+        // 👉 Reusamos sesión existente (mismo historial)
+        sessionId.value = stored.id
+
+        // rellenamos contacto en memoria, si estaba en storage
+        if (stored.contact) {
+          contact.value.name = stored.contact.name || ''
+          contact.value.email = stored.contact.email || ''
+          contact.value.phone = stored.contact.phone || ''
+          // si ya tiene todo, damos por hecho que se completó la captura
+          if (contact.value.name && contact.value.email && contact.value.phone) {
+            contactStage.value = 'done'
+          }
+        }
+
+        initSocket()
+
+        // actualizamos lastSeenAt
+        saveSessionToStorage({
+          lastSeenAt: new Date().toISOString(),
+        })
+
+        return stored.id
+      }
+    }
+
+    // 👉 Si no se puede reutilizar, creamos NUEVA sesión
     const meta = getClientMeta({ origin: 'solar-widget' })
     const session = await createChatSession(
       {
@@ -122,6 +195,18 @@ export default function useChatbot () {
     )
 
     sessionId.value = session.id
+
+    const nowIso = new Date().toISOString()
+    saveSessionToStorage({
+      id: session.id,
+      createdAt: nowIso,
+      lastSeenAt: nowIso,
+      contact: {
+        name: '',
+        email: '',
+        phone: '',
+      },
+    })
 
     initSocket()
 
@@ -150,37 +235,24 @@ export default function useChatbot () {
   function initSocket () {
     if (!sessionId.value || socketInitialized.value) return
 
-    // role "visitor" → en server va a room "widgets"
-    connectSocket('visitor', sessionId.value)
+    // role "widget" → en server va a "widgets"
+    connectSocket('widget', sessionId.value)
 
     // mensajes nuevos desde el CRM (agente / bot server)
     wsMessageHandler = payload => {
-      // ignoramos mensajes que vengan marcados como 'user'
       if (payload.from === 'user') return
 
       const msg = mapSocketMessage(payload)
-
-      // 👇 Si el mensaje viene de un AGENTE, apagamos el "escribiendo"
-      if (payload.from === 'agent') {
-        agentTyping.value = false
-      }
-
       messages.value.push(msg)
       nextTick(scrollToBottom)
     }
 
-    // presencia de agentes: { sessionId, count }
+    // presencia de agentes POR SESIÓN: { sessionId, count }
     wsAgentsOnlineHandler = data => {
       if (!data) return
       const sid = String(data.sessionId || '')
+      if (!sid || sid !== String(sessionId.value || '')) return
       const count = Number(data.count || 0)
-
-      if (!sessionId.value || sid !== String(sessionId.value)) {
-        // Evento de otra sesión → para este widget no hay agente
-        agentOnline.value = false
-        return
-      }
-
       agentOnline.value = count > 0
     }
 
@@ -207,9 +279,6 @@ export default function useChatbot () {
 
   // ---------- flujo de captura de datos ----------
   async function askForName (sid) {
-    // si ya hay un agente en el chat, no seguimos con el flujo automático
-    if (agentOnline.value) return
-
     const text =
       'Antes de seguir, ¿me decís tu nombre y apellido para registrarte?'
 
@@ -226,8 +295,6 @@ export default function useChatbot () {
   }
 
   async function handleNameStep (sid, text) {
-    if (agentOnline.value) return
-
     contact.value.name = text.trim()
 
     const firstName = contact.value.name.split(' ')[0] || ''
@@ -246,11 +313,17 @@ export default function useChatbot () {
     })
 
     contactStage.value = 'askEmail'
+
+    // guardamos parcial en storage
+    saveSessionToStorage({
+      contact: {
+        ...contact.value,
+      },
+      lastSeenAt: new Date().toISOString(),
+    })
   }
 
   async function handleEmailStep (sid, text) {
-    if (agentOnline.value) return
-
     const email = text.trim()
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -283,11 +356,16 @@ export default function useChatbot () {
     })
 
     contactStage.value = 'askPhone'
+
+    saveSessionToStorage({
+      contact: {
+        ...contact.value,
+      },
+      lastSeenAt: new Date().toISOString(),
+    })
   }
 
   async function handlePhoneStep (sid, text) {
-    if (agentOnline.value) return
-
     const cleaned = (text || '').replace(/\D/g, '')
     if (cleaned.length < 6) {
       const retryText =
@@ -306,6 +384,7 @@ export default function useChatbot () {
     contact.value.phone = text.trim()
 
     try {
+      // 👉 esto actualiza el PERFIL en el backend (CRM ve estos datos)
       await updateChatContact(sid, {
         name: contact.value.name,
         email: contact.value.email,
@@ -328,16 +407,36 @@ export default function useChatbot () {
     })
 
     contactStage.value = 'done'
+
+    // guardamos contacto completo en storage → PERFIL local
+    saveSessionToStorage({
+      contact: {
+        ...contact.value,
+      },
+      lastSeenAt: new Date().toISOString(),
+    })
   }
 
   // ---------- acciones UI ----------
   async function toggleOpen () {
+    const wasOpen = isOpen.value
     isOpen.value = !isOpen.value
-    if (isOpen.value) {
-      await ensureSession()
+
+    if (isOpen.value && !wasOpen) {
+      // se abre el widget
+      const sid = await ensureSession()
       await loadHistory()
       await nextTick()
       scrollToBottom()
+
+      saveSessionToStorage({
+        lastSeenAt: new Date().toISOString(),
+      })
+    } else if (!isOpen.value && wasOpen) {
+      // se cierra el widget
+      saveSessionToStorage({
+        lastSeenAt: new Date().toISOString(),
+      })
     }
   }
 
@@ -363,7 +462,6 @@ export default function useChatbot () {
     try {
       const sid = await ensureSession()
 
-      // Siempre persistimos el mensaje del usuario
       await sendHttpMessage(sid, text, 'user', {
         origin: 'widget',
         contactStage: contactStage.value,
@@ -376,15 +474,11 @@ export default function useChatbot () {
         message: text,
       })
 
-      // Si hay un agente presente en ESTA sesión,
-      // dejamos que el humano maneje todo y NO seguimos con flujos automáticos.
-      if (agentOnline.value) {
-        await nextTick()
-        scrollToBottom()
-        return
-      }
+      // actualizamos actividad de sesión
+      saveSessionToStorage({
+        lastSeenAt: new Date().toISOString(),
+      })
 
-      // Si NO hay agente, seguimos con el flujo automático
       if (contactStage.value === 'askName') {
         await handleNameStep(sid, text)
       } else if (contactStage.value === 'askEmail') {
@@ -439,6 +533,12 @@ export default function useChatbot () {
   }
 
   // ---------- ciclo de vida ----------
+  function markLastSeenBeforeUnload () {
+    saveSessionToStorage({
+      lastSeenAt: new Date().toISOString(),
+    })
+  }
+
   onMounted(() => {
     messages.value.push({
       id: 'welcome-bot',
@@ -450,12 +550,20 @@ export default function useChatbot () {
     })
 
     nextTick(scrollToBottom)
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', markLastSeenBeforeUnload)
+    }
   })
 
   onBeforeUnmount(() => {
     if (wsMessageHandler) offWsMessage(wsMessageHandler)
     if (wsAgentsOnlineHandler) offAgentsOnline(wsAgentsOnlineHandler)
     if (wsAgentTypingHandler) offAgentTyping(wsAgentTypingHandler)
+
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('beforeunload', markLastSeenBeforeUnload)
+    }
   })
 
   // lo que exponemos al componente
