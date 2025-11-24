@@ -177,6 +177,9 @@ export default function useChatbot () {
       if (!data) return
       if (String(data.sessionId || '') !== String(sessionId.value || '')) return
 
+      // si hay typing, seguro hay un agente conectado
+      agentOnline.value = true
+
       agentTyping.value = !!data.typing
 
       if (agentTyping.value) {
