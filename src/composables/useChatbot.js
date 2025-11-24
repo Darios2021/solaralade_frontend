@@ -36,7 +36,7 @@ export default function useChatbot () {
 
   const messages = ref([])
 
-  // id de sesión en backend (ID único de la conversación)
+  // id de sesión en backend
   const sessionId = ref(null)
 
   // contacto que queremos capturar
@@ -81,9 +81,10 @@ export default function useChatbot () {
     () => newMessage.value.trim().length > 0 && !isSending.value,
   )
 
+  // 👉 ya NO usamos agentOnline para el texto de estado
   const statusText = computed(() => {
     if (agentTyping.value) return 'Un asesor está escribiendo…'
-    if (agentOnline.value) return 'Asesor en línea'
+    // siempre mostramos el texto “genérico” cuando no está escribiendo
     return 'Dejanos tu consulta y la revisamos a la brevedad'
   })
 
@@ -164,7 +165,7 @@ export default function useChatbot () {
       nextTick(scrollToBottom)
     }
 
-    // presencia de agentes: { count }
+    // presencia de agentes: { count } – la seguimos guardando por si
     wsAgentsOnlineHandler = data => {
       if (!data) return
       const count = Number(data.count || 0)
@@ -176,8 +177,6 @@ export default function useChatbot () {
       if (!data) return
       if (String(data.sessionId || '') !== String(sessionId.value || '')) return
 
-      // si hay typing, seguro hay un agente conectado
-      agentOnline.value = true
       agentTyping.value = !!data.typing
 
       if (agentTyping.value) {
@@ -439,7 +438,6 @@ export default function useChatbot () {
     messagesContainer,
     agentOnline,
     agentTyping,
-    sessionId, // por si querés mostrar el ID único en el widget
     // computeds
     canSend,
     statusText,
