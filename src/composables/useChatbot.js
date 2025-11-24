@@ -3,6 +3,7 @@ import {
   ref,
   computed,
   onMounted,
+  onBeforeUnmount,
   nextTick,
 } from 'vue'
 
@@ -11,41 +12,54 @@ import {
   createChatSession,
   sendChatMessage as sendHttpMessage,
   fetchSessionMessages,
+  updateChatContact,
 } from '../service/chatClient'
 
-import useChatSocket from './useChatSocket'
-import useChatContactFlow from './useChatContactFlow'
+import {
+  connectSocket,
+  onChatMessage as onWsMessage,
+  offChatMessage as offWsMessage,
+  sendChatMessage as sendWsMessage,
+  sendTyping,
+  onAgentsOnline,
+  offAgentsOnline,
+  onAgentTyping,
+  offAgentTyping,
+} from '../service/chatSocket'
 
 export default function useChatbot () {
-  // ---------- state UI ----------
+  // ---------- state básico ----------
   const isOpen = ref(false)
   const newMessage = ref('')
   const isSending = ref(false)
   const isLoadingHistory = ref(false)
 
   const messages = ref([])
-  const messagesContainer = ref(null)
 
-  // sesión
+  // id de sesión en backend
   const sessionId = ref(null)
 
-  // composables especializados
-  const {
-    agentOnline,
-    agentTyping,
-    initSocket,
-    sendWs,
-    notifyTyping,
-  } = useChatSocket()
+  // contacto que queremos capturar
+  const contact = ref({
+    name: '',
+    email: '',
+    phone: '',
+  })
 
-  const {
-    contact,
-    contactStage,
-    askForName,
-    handleNameStep,
-    handleEmailStep,
-    handlePhoneStep,
-  } = useChatContactFlow()
+  // etapas para capturar los datos
+  // 'none' | 'askName' | 'askEmail' | 'askPhone' | 'done'
+  const contactStage = ref('none')
+
+  const messagesContainer = ref(null)
+
+  let wsMessageHandler = null
+  let wsAgentsOnlineHandler = null
+  let wsAgentTypingHandler = null
+  const socketInitialized = ref(false)
+
+  // estado de asesor
+  const agentOnline = ref(false)
+  const agentTyping = ref(false)
 
   // ---------- helpers visuales ----------
   function formatTime (date) {
@@ -87,7 +101,7 @@ export default function useChatbot () {
     return {
       id: p.id || `${Date.now()}-${p.from || 'agent'}`,
       from: p.from === 'agent' || p.from === 'bot' ? 'bot' : 'user',
-      text: p.message,
+      text: p.message ?? p.text,
       ts: p.createdAt || new Date().toISOString(),
     }
   }
@@ -109,12 +123,7 @@ export default function useChatbot () {
 
     sessionId.value = session.id
 
-    // inicializar socket para esta sesión
-    initSocket(session.id, payload => {
-      const msg = mapSocketMessage(payload)
-      messages.value.push(msg)
-      nextTick(scrollToBottom)
-    })
+    initSocket()
 
     return session.id
   }
@@ -124,7 +133,12 @@ export default function useChatbot () {
     isLoadingHistory.value = true
     try {
       const backendMessages = await fetchSessionMessages(sessionId.value)
-      messages.value = backendMessages.map(mapBackendMessage)
+      // en este proyecto fetchSessionMessages devuelve ARRAY simple
+      const arr = Array.isArray(backendMessages)
+        ? backendMessages
+        : backendMessages.messages || []
+
+      messages.value = arr.map(mapBackendMessage)
       await nextTick()
       scrollToBottom()
     } catch (err) {
@@ -134,18 +148,163 @@ export default function useChatbot () {
     }
   }
 
-  // helper para crear mensajes locales de bot
-  function pushLocalBotMessage (text, keySuffix = 'bot') {
+  function initSocket () {
+    if (!sessionId.value || socketInitialized.value) return
+
+    connectSocket('visitor', sessionId.value)
+
+    // mensajes nuevos desde el CRM (agente / bot server)
+    wsMessageHandler = payload => {
+      // ignoramos mensajes que vengan marcados como 'user'
+      if (payload.from === 'user') return
+
+      const msg = mapSocketMessage(payload)
+      messages.value.push(msg)
+      nextTick(scrollToBottom)
+    }
+
+    // presencia de agentes: { count }
+    wsAgentsOnlineHandler = data => {
+      if (!data) return
+      const count = Number(data.count || 0)
+      agentOnline.value = count > 0
+    }
+
+    // typing del agente: { sessionId, typing }
+    wsAgentTypingHandler = data => {
+      if (!data) return
+      if (String(data.sessionId || '') !== String(sessionId.value || '')) return
+
+      agentTyping.value = !!data.typing
+
+      if (agentTyping.value) {
+        setTimeout(() => {
+          agentTyping.value = false
+        }, 5000)
+      }
+    }
+
+    onWsMessage(wsMessageHandler)
+    onAgentsOnline(wsAgentsOnlineHandler)
+    onAgentTyping(wsAgentTypingHandler)
+
+    socketInitialized.value = true
+  }
+
+  // ---------- flujo de captura de datos ----------
+  async function askForName (sid) {
+    const text =
+      'Antes de seguir, ¿me decís tu nombre y apellido para registrarte?'
+
+    await sendHttpMessage(sid, text, 'bot', { kind: 'askName' })
+
     messages.value.push({
-      id: `${Date.now()}-${keySuffix}`,
+      id: Date.now() + '-bot-ask-name',
       from: 'bot',
       text,
       ts: new Date(),
     })
+
+    contactStage.value = 'askName'
   }
 
-  async function sendBotMessage (sid, text, extraMeta = {}) {
-    await sendHttpMessage(sid, text, 'bot', extraMeta)
+  async function handleNameStep (sid, text) {
+    contact.value.name = text.trim()
+
+    const firstName = contact.value.name.split(' ')[0] || ''
+
+    const askEmailText = firstName
+      ? `Gracias, ${firstName}. ¿Cuál es tu correo electrónico?`
+      : 'Gracias. ¿Cuál es tu correo electrónico?'
+
+    await sendHttpMessage(sid, askEmailText, 'bot', { kind: 'askEmail' })
+
+    messages.value.push({
+      id: Date.now() + '-bot-ask-email',
+      from: 'bot',
+      text: askEmailText,
+      ts: new Date(),
+    })
+
+    contactStage.value = 'askEmail'
+  }
+
+  async function handleEmailStep (sid, text) {
+    const email = text.trim()
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+    if (!emailOk) {
+      const retryText =
+        'Parece que el correo no es válido. Probá ingresarlo nuevamente (ejemplo: usuario@correo.com).'
+      await sendHttpMessage(sid, retryText, 'bot', { kind: 'invalidEmail' })
+
+      messages.value.push({
+        id: Date.now() + '-bot-email-invalid',
+        from: 'bot',
+        text: retryText,
+        ts: new Date(),
+      })
+      return
+    }
+
+    contact.value.email = email
+
+    const askPhoneText =
+      'Perfecto. ¿Me dejás un número de WhatsApp o teléfono de contacto?'
+
+    await sendHttpMessage(sid, askPhoneText, 'bot', { kind: 'askPhone' })
+
+    messages.value.push({
+      id: Date.now() + '-bot-ask-phone',
+      from: 'bot',
+      text: askPhoneText,
+      ts: new Date(),
+    })
+
+    contactStage.value = 'askPhone'
+  }
+
+  async function handlePhoneStep (sid, text) {
+    const cleaned = (text || '').replace(/\D/g, '')
+    if (cleaned.length < 6) {
+      const retryText =
+        'Necesito un número un poco más completo (incluí código de área, por ejemplo 264xxxxxxx).'
+      await sendHttpMessage(sid, retryText, 'bot', { kind: 'invalidPhone' })
+
+      messages.value.push({
+        id: Date.now() + '-bot-phone-invalid',
+        from: 'bot',
+        text: retryText,
+        ts: new Date(),
+      })
+      return
+    }
+
+    contact.value.phone = text.trim()
+
+    try {
+      await updateChatContact(sid, {
+        name: contact.value.name,
+        email: contact.value.email,
+        phone: contact.value.phone,
+      })
+    } catch (e) {
+      console.error('[Chatbot] Error actualizando contacto', e)
+    }
+
+    const doneText =
+      '¡Listo! Ya guardamos tus datos para que un asesor pueda contactarte si hace falta.'
+
+    await sendHttpMessage(sid, doneText, 'bot', { kind: 'contactDone' })
+
+    messages.value.push({
+      id: Date.now() + '-bot-contact-done',
+      from: 'bot',
+      text: doneText,
+      ts: new Date(),
+    })
+
+    contactStage.value = 'done'
   }
 
   // ---------- acciones UI ----------
@@ -177,6 +336,7 @@ export default function useChatbot () {
     scrollToBottom()
 
     isSending.value = true
+    agentTyping.value = false
     try {
       const sid = await ensureSession()
 
@@ -186,39 +346,32 @@ export default function useChatbot () {
       })
 
       // WS para que el CRM reciba en tiempo real
-      sendWs({ from: 'user', text })
+      sendWsMessage({ from: 'user', text })
 
-      // flujo de contacto (según estado actual)
       if (contactStage.value === 'askName') {
-        await handleNameStep(sid, text, {
-          sendBotMessage,
-          pushLocalBotMessage,
-        })
+        await handleNameStep(sid, text)
       } else if (contactStage.value === 'askEmail') {
-        await handleEmailStep(sid, text, {
-          sendBotMessage,
-          pushLocalBotMessage,
-        })
+        await handleEmailStep(sid, text)
       } else if (contactStage.value === 'askPhone') {
-        await handlePhoneStep(sid, text, {
-          sendBotMessage,
-          pushLocalBotMessage,
-        })
+        await handlePhoneStep(sid, text)
       } else {
-        // flujo normal: autoreply + eventualmente inicio captura de datos
         const autoText =
           'Gracias por tu consulta. Un asesor va a revisarla y, si hace falta, se contactará por este chat o por WhatsApp/mail.'
 
-        await sendBotMessage(sid, autoText, { autoReply: true })
-        pushLocalBotMessage(autoText, 'bot-autoreply')
+        await sendHttpMessage(sid, autoText, 'bot', { autoReply: true })
 
-        sendWs({ from: 'bot', text: autoText })
+        const autoMsg = {
+          id: Date.now() + '-bot-autoreply',
+          from: 'bot',
+          text: autoText,
+          ts: new Date(),
+        }
+        messages.value.push(autoMsg)
+
+        sendWsMessage({ from: 'bot', text: autoText })
 
         if (contactStage.value === 'none') {
-          await askForName(sid, {
-            sendBotMessage,
-            pushLocalBotMessage,
-          })
+          await askForName(sid)
         }
       }
 
@@ -228,18 +381,18 @@ export default function useChatbot () {
       console.error('[Chatbot] Error enviando mensaje', err)
     } finally {
       isSending.value = false
-      notifyTyping({ from: 'user', isTyping: false })
+      sendTyping({ from: 'user', isTyping: false })
     }
   }
 
   // avisar al CRM que el usuario está / dejó de escribir
   let typingTimeout = null
   function handleTyping () {
-    notifyTyping({ from: 'user', isTyping: true })
+    sendTyping({ from: 'user', isTyping: true })
 
     if (typingTimeout) clearTimeout(typingTimeout)
     typingTimeout = setTimeout(() => {
-      notifyTyping({ from: 'user', isTyping: false })
+      sendTyping({ from: 'user', isTyping: false })
     }, 2000)
   }
 
@@ -257,26 +410,29 @@ export default function useChatbot () {
     nextTick(scrollToBottom)
   })
 
+  onBeforeUnmount(() => {
+    if (wsMessageHandler) offWsMessage(wsMessageHandler)
+    if (wsAgentsOnlineHandler) offAgentsOnline(wsAgentsOnlineHandler)
+    if (wsAgentTypingHandler) offAgentTyping(wsAgentTypingHandler)
+  })
+
+  // lo que exponemos al componente
   return {
-    // state UI
+    // state
     isOpen,
     newMessage,
     isSending,
     isLoadingHistory,
     messages,
     messagesContainer,
-    // estado de agente
     agentOnline,
     agentTyping,
-    // contacto (por si después lo querés mostrar)
-    contact,
-    contactStage,
     // computeds
     canSend,
     statusText,
     // helpers
     formatTime,
-    // acciones
+    // actions
     toggleOpen,
     handleSend,
     handleTyping,
