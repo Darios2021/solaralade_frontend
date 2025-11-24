@@ -11,6 +11,9 @@ const WS_URL =
 
 let socket = null
 
+// session actual del widget
+let currentSessionId = null
+
 // listeners registrados desde el widget
 const messageHandlers = new Set()
 const agentsOnlineHandlers = new Set()
@@ -25,7 +28,8 @@ export function connectSocket (role = 'widget', sessionId = null) {
   // Si ya hay socket conectado, solo lo unimos al room de sesión
   if (socket && socket.connected) {
     if (sessionId) {
-      socket.emit('joinSession', { sessionId: String(sessionId) })
+      currentSessionId = String(sessionId)
+      socket.emit('joinSession', { sessionId: currentSessionId })
     }
     return socket
   }
@@ -40,7 +44,8 @@ export function connectSocket (role = 'widget', sessionId = null) {
     console.log('[ChatSock widget] conectado', socket.id, 'role=', role)
 
     if (sessionId) {
-      socket.emit('joinSession', { sessionId: String(sessionId) })
+      currentSessionId = String(sessionId)
+      socket.emit('joinSession', { sessionId: currentSessionId })
     }
   })
 
@@ -102,10 +107,17 @@ export function sendChatMessage ({ sessionId, from, message }) {
 }
 
 /**
- * “Typing” desde el widget → por ahora NO se usa en el server
+ * “Typing” desde el widget → ahora SÍ lo usamos en el server
+ * payload: { from: 'user', isTyping: boolean }
  */
-export function sendTyping (_payload) {
-  // noop
+export function sendTyping (payload) {
+  if (!socket || !currentSessionId) return
+
+  const typing = !!(payload && payload.isTyping)
+  socket.emit('userTyping', {
+    sessionId: currentSessionId,
+    typing,
+  })
 }
 
 /**
