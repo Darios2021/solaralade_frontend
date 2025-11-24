@@ -159,6 +159,12 @@ export default function useChatbot () {
       if (payload.from === 'user') return
 
       const msg = mapSocketMessage(payload)
+
+      // 👇 Si el mensaje viene de un AGENTE, apagamos el "escribiendo"
+      if (payload.from === 'agent') {
+        agentTyping.value = false
+      }
+
       messages.value.push(msg)
       nextTick(scrollToBottom)
     }
@@ -370,8 +376,8 @@ export default function useChatbot () {
         message: text,
       })
 
-      // 👇 Si hay un agente presente en ESTA sesión,
-      //    dejamos que el humano maneje todo y NO seguimos con flujos automáticos.
+      // Si hay un agente presente en ESTA sesión,
+      // dejamos que el humano maneje todo y NO seguimos con flujos automáticos.
       if (agentOnline.value) {
         await nextTick()
         scrollToBottom()
