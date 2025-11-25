@@ -30,9 +30,9 @@ import {
 // ==== PERSISTENCIA DE SESIÓN EN LOCALSTORAGE ====
 const STORAGE_KEY = 'solar_chat_session_v1'
 const MS_PER_HOUR = 60 * 60 * 1000
-// Ajustá estos valores si querés otra ventana de "misma conversación"
-const MAX_SESSION_AGE_HOURS = 24 // máximo desde que se creó
-const MAX_SESSION_IDLE_HOURS = 12 // máximo tiempo sin actividad
+// Ventana para reutilizar la misma conversación
+const MAX_SESSION_AGE_HOURS = 24   // máximo desde que se creó
+const MAX_SESSION_IDLE_HOURS = 12  // máximo tiempo sin actividad
 
 function loadStoredSession () {
   if (typeof window === 'undefined') return null
@@ -165,7 +165,6 @@ export default function useChatbot () {
           contact.value.name = stored.contact.name || ''
           contact.value.email = stored.contact.email || ''
           contact.value.phone = stored.contact.phone || ''
-          // si ya tiene todo, damos por hecho que se completó la captura
           if (contact.value.name && contact.value.email && contact.value.phone) {
             contactStage.value = 'done'
           }
@@ -306,6 +305,15 @@ export default function useChatbot () {
   async function handleNameStep (sid, text) {
     contact.value.name = text.trim()
 
+    // 👉 Guardamos NOMBRE parcial en el perfil de la sesión
+    try {
+      await updateChatContact(sid, {
+        name: contact.value.name,
+      })
+    } catch (e) {
+      console.error('[Chatbot] Error actualizando nombre de contacto', e)
+    }
+
     const firstName = contact.value.name.split(' ')[0] || ''
 
     const askEmailText = firstName
@@ -352,6 +360,16 @@ export default function useChatbot () {
 
     contact.value.email = email
 
+    // 👉 Guardamos NOMBRE + EMAIL en el perfil de la sesión
+    try {
+      await updateChatContact(sid, {
+        name: contact.value.name,
+        email: contact.value.email,
+      })
+    } catch (e) {
+      console.error('[Chatbot] Error actualizando email de contacto', e)
+    }
+
     const askPhoneText =
       'Perfecto. ¿Me dejás un número de WhatsApp o teléfono de contacto?'
 
@@ -393,7 +411,7 @@ export default function useChatbot () {
     contact.value.phone = text.trim()
 
     try {
-      // 👉 esto actualiza el PERFIL en el backend (CRM ve estos datos)
+      // 👉 PERFIL COMPLETO: nombre + email + teléfono
       await updateChatContact(sid, {
         name: contact.value.name,
         email: contact.value.email,
@@ -500,10 +518,8 @@ export default function useChatbot () {
           const autoText =
             'Gracias por tu consulta. Un asesor va a revisarla y, si hace falta, se contactará por este chat o por WhatsApp/mail.'
 
-          // 👉 Lo guardamos en backend
           await sendHttpMessage(sid, autoText, 'bot', { autoReply: true })
 
-          // 👉 Lo mostramos localmente en el widget
           const autoMsg = {
             id: Date.now() + '-bot-autoreply',
             from: 'bot',
@@ -513,7 +529,6 @@ export default function useChatbot () {
           messages.value.push(autoMsg)
         }
 
-        // Pedir datos de contacto solo si todavía no empezamos la captura
         if (contactStage.value === 'none') {
           await askForName(sid)
         }
