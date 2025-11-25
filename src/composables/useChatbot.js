@@ -31,8 +31,8 @@ import {
 const STORAGE_KEY = 'solar_chat_session_v1'
 const MS_PER_HOUR = 60 * 60 * 1000
 // Ajustá estos valores si querés otra ventana de "misma conversación"
-const MAX_SESSION_AGE_HOURS = 24      // máximo desde que se creó
-const MAX_SESSION_IDLE_HOURS = 12     // máximo tiempo sin actividad
+const MAX_SESSION_AGE_HOURS = 24 // máximo desde que se creó
+const MAX_SESSION_IDLE_HOURS = 12 // máximo tiempo sin actividad
 
 function loadStoredSession () {
   if (typeof window === 'undefined') return null
@@ -240,10 +240,15 @@ export default function useChatbot () {
 
     // mensajes nuevos desde el CRM (agente / bot server)
     wsMessageHandler = payload => {
+      // ignoramos mensajes marcados como 'user' (ya los tenemos localmente)
       if (payload.from === 'user') return
 
       const msg = mapSocketMessage(payload)
       messages.value.push(msg)
+
+      // si llegó un mensaje del agente/bot, dejamos de mostrar "escribiendo"
+      agentTyping.value = false
+
       nextTick(scrollToBottom)
     }
 
@@ -254,6 +259,10 @@ export default function useChatbot () {
       if (!sid || sid !== String(sessionId.value || '')) return
       const count = Number(data.count || 0)
       agentOnline.value = count > 0
+
+      if (!agentOnline.value) {
+        agentTyping.value = false
+      }
     }
 
     // typing del agente: { sessionId, typing }
@@ -489,8 +498,10 @@ export default function useChatbot () {
         const autoText =
           'Gracias por tu consulta. Un asesor va a revisarla y, si hace falta, se contactará por este chat o por WhatsApp/mail.'
 
+        // 👉 Lo guardamos en backend
         await sendHttpMessage(sid, autoText, 'bot', { autoReply: true })
 
+        // 👉 Lo mostramos localmente en el widget
         const autoMsg = {
           id: Date.now() + '-bot-autoreply',
           from: 'bot',
@@ -499,12 +510,9 @@ export default function useChatbot () {
         }
         messages.value.push(autoMsg)
 
-        // también por WS, con sessionId
-        sendWsMessage({
-          sessionId: sid,
-          from: 'bot',
-          message: autoText,
-        })
+        // ⚠️ IMPORTANTE:
+        // Ya NO lo enviamos por WebSocket desde el widget
+        // para evitar que vuelva rebotado y se duplique.
 
         if (contactStage.value === 'none') {
           await askForName(sid)
