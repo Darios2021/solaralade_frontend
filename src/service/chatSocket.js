@@ -10,8 +10,6 @@ const WS_URL =
   'https://solar-backend.cingulado.org'
 
 let socket = null
-
-// session actual del widget
 let currentSessionId = null
 
 // listeners registrados desde el widget
@@ -25,11 +23,13 @@ const agentTypingHandlers = new Set()
  * sessionId: ID de sesión de chat para unirse al room de esa sesión
  */
 export function connectSocket (role = 'widget', sessionId = null) {
+  const sid = sessionId != null ? String(sessionId) : null
+  if (sid) currentSessionId = sid
+
   // Si ya hay socket conectado, solo lo unimos al room de sesión
   if (socket && socket.connected) {
-    if (sessionId) {
-      currentSessionId = String(sessionId)
-      socket.emit('joinSession', { sessionId: currentSessionId })
+    if (sid) {
+      socket.emit('joinSession', { sessionId: sid })
     }
     return socket
   }
@@ -43,8 +43,7 @@ export function connectSocket (role = 'widget', sessionId = null) {
   socket.on('connect', () => {
     console.log('[ChatSock widget] conectado', socket.id, 'role=', role)
 
-    if (sessionId) {
-      currentSessionId = String(sessionId)
+    if (currentSessionId) {
       socket.emit('joinSession', { sessionId: currentSessionId })
     }
   })
@@ -97,8 +96,11 @@ export function sendChatMessage ({ sessionId, from, message }) {
   if (!socket) return
   if (!sessionId) return
 
+  const sid = String(sessionId)
+  currentSessionId = sid
+
   const payload = {
-    sessionId: String(sessionId),
+    sessionId: sid,
     from,
     message,
   }
@@ -107,16 +109,18 @@ export function sendChatMessage ({ sessionId, from, message }) {
 }
 
 /**
- * “Typing” desde el widget → ahora SÍ lo usamos en el server
- * payload: { from: 'user', isTyping: boolean }
+ * “Typing” desde el widget → server (userTyping)
+ * espera payload: { from: 'user', isTyping: boolean }
  */
 export function sendTyping (payload) {
   if (!socket || !currentSessionId) return
+  if (!payload) return
+  const { from, isTyping } = payload
+  if (from !== 'user') return
 
-  const typing = !!(payload && payload.isTyping)
   socket.emit('userTyping', {
     sessionId: currentSessionId,
-    typing,
+    typing: !!isTyping,
   })
 }
 

@@ -495,25 +495,25 @@ export default function useChatbot () {
       } else if (contactStage.value === 'askPhone') {
         await handlePhoneStep(sid, text)
       } else {
-        const autoText =
-          'Gracias por tu consulta. Un asesor va a revisarla y, si hace falta, se contactará por este chat o por WhatsApp/mail.'
+        // --------- AUTO-RESPUESTA SOLO SI NO HAY AGENTE ONLINE ---------
+        if (!agentOnline.value) {
+          const autoText =
+            'Gracias por tu consulta. Un asesor va a revisarla y, si hace falta, se contactará por este chat o por WhatsApp/mail.'
 
-        // 👉 Lo guardamos en backend
-        await sendHttpMessage(sid, autoText, 'bot', { autoReply: true })
+          // 👉 Lo guardamos en backend
+          await sendHttpMessage(sid, autoText, 'bot', { autoReply: true })
 
-        // 👉 Lo mostramos localmente en el widget
-        const autoMsg = {
-          id: Date.now() + '-bot-autoreply',
-          from: 'bot',
-          text: autoText,
-          ts: new Date(),
+          // 👉 Lo mostramos localmente en el widget
+          const autoMsg = {
+            id: Date.now() + '-bot-autoreply',
+            from: 'bot',
+            text: autoText,
+            ts: new Date(),
+          }
+          messages.value.push(autoMsg)
         }
-        messages.value.push(autoMsg)
 
-        // ⚠️ IMPORTANTE:
-        // Ya NO lo enviamos por WebSocket desde el widget
-        // para evitar que vuelva rebotado y se duplique.
-
+        // Pedir datos de contacto solo si todavía no empezamos la captura
         if (contactStage.value === 'none') {
           await askForName(sid)
         }
